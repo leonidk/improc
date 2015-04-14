@@ -8,6 +8,7 @@
     <ClInclude Include="..\src\stb_image_write.h">
       <Filter>IO</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\image_io.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Main.cpp" />

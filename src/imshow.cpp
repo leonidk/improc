@@ -56,7 +56,7 @@ namespace img {
 	void imshow(const char * name, const Image & img){
 		std::unique_lock<std::mutex> lock(g_mutex);
 		std::string s_name(name);
-		if (img.data == NULL || img.height*img.width == 0)
+		if (img.data.get() == NULL || img.height*img.width == 0)
 			return;
 		if (g_windows.find(s_name) == g_windows.end())
 		{
@@ -120,7 +120,7 @@ namespace img {
 			format = GL_RGBA;
 			break;
 		}
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width, img.height, 0, format, type, img.data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width, img.height, 0, format, type, img.data.get());
 
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -128,10 +128,10 @@ namespace img {
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
 		glBegin(GL_QUADS);
-		glTexCoord2f(0, 0);	 glVertex2f(-1, -1);
-		glTexCoord2f(1, 0);	 glVertex2f(1, -1);
-		glTexCoord2f(1, 1);	 glVertex2f(1, 1);
-		glTexCoord2f(0, 1);	 glVertex2f(-1, 1);
+		glTexCoord2f(0, 1);	 glVertex2f(-1, -1);
+		glTexCoord2f(1, 1);	 glVertex2f(1, -1);
+		glTexCoord2f(1, 0);	 glVertex2f(1, 1);
+		glTexCoord2f(0, 0);	 glVertex2f(-1, 1);
 		glEnd();
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_ALPHA);
@@ -154,7 +154,9 @@ namespace img {
 				glfwSwapBuffers(win.second.win);
 				lock.unlock();
 				if (wait)
-					glfwWaitEvents();
+					do {
+						glfwWaitEvents();
+					} while (!g_key_update);
 				else {
 					glfwPollEvents();
 				}

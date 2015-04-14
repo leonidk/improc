@@ -31,7 +31,10 @@ TestResult.xml
 [Dd]ebugPS/
 [Rr]eleasePS/
 dlldata.c
-
+*.jpg
+*.png
+*.pgm
+*.ppm
 *_i.c
 *_p.c
 *_i.h
@@ -129,7 +132,7 @@ publish/
 #*.pubxml
 
 # NuGet Packages Directory
-packages/*
+msvc/packages/*
 ## TODO: If the tool you use requires repositories.config
 ## uncomment the next line
 #!packages/repositories.config

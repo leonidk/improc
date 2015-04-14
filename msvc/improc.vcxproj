@@ -79,6 +79,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\src\image.h" />
+    <ClInclude Include="..\src\image_io.h" />
     <ClInclude Include="..\src\stb_image.h" />
     <ClInclude Include="..\src\stb_image_write.h" />
   </ItemGroup>

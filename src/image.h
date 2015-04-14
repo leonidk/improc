@@ -1,5 +1,5 @@
 #pragma once
-
+#include <memory>
 namespace img {
 	enum {
 		IM_8U,
@@ -13,15 +13,12 @@ namespace img {
 	};
 
 	struct Image {
-		void* data;
+		std::shared_ptr<void> data;
 		int type;
 		int width, height, channels;
 	};
-	//imio.cpp
-	Image imread(const char * name);
-	void imwrite(const char * name, const Image &img);
 
-	//imshow.cpp
-	void imshow(const char * name, const Image &img);
-	char getKey(bool wait = false);
+	///useful for non-owning calls:
+	//		img::imshow("tmp", { { tmp, img::null_d }, img::IM_8U, 320, 240, 1 });
+	static auto null_d = [](const void * p){};
 }
