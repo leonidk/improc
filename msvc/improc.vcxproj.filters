@@ -9,6 +9,7 @@
       <Filter>IO</Filter>
     </ClInclude>
     <ClInclude Include="..\src\image_io.h" />
+    <ClInclude Include="..\src\image_filter.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Main.cpp" />
