@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="..\src\image.h" />
+    <ClInclude Include="..\src\stb_image.h">
+      <Filter>IO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\stb_image_write.h">
+      <Filter>IO</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\Main.cpp" />
+    <ClCompile Include="..\src\imio.cpp">
+      <Filter>IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\imshow.cpp">
+      <Filter>IO</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="IO">
+      <UniqueIdentifier>{402eb6ff-3ed8-4488-a5af-b3aae1c63511}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

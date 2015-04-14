@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Needs to be placed in %USERPROFILE%\My Documents\Visual Studio 2013\Visualizers -->
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+
+
+  <UIVisualizer ServiceId="{A452AFEA-3DF6-46BB-9177-C0B08F318025}" Id="1"
+
+                MenuName="Add to Image Watch"/>
+
+
+  <Type Name="Image">
+
+    <UIVisualizer ServiceId="{A452AFEA-3DF6-46BB-9177-C0B08F318025}" Id="1" />
+
+  </Type>
+
+
+
+  <Type Name="Image">
+
+    <Expand>
+
+      <Synthetic Name="[type]" Condition="type==0">
+        <DisplayString>UINT8</DisplayString>
+      </Synthetic>
+      <Synthetic Name="[type]" Condition="type==1">
+        <DisplayString>INT8</DisplayString>
+      </Synthetic>
+      <Synthetic Name="[type]" Condition="type==2">
+        <DisplayString>UINT16</DisplayString>
+      </Synthetic>
+      <Synthetic Name="[type]" Condition="type==3">
+        <DisplayString>INT16</DisplayString>
+      </Synthetic>
+      <Synthetic Name="[type]" Condition="type==4">
+        <DisplayString>INT32</DisplayString>
+      </Synthetic>
+      <Synthetic Name="[type]" Condition="type==5">
+        <DisplayString>INT32</DisplayString>
+      </Synthetic>
+      <Synthetic Name="[type]" Condition="type==6">
+        <DisplayString>FLOAT32</DisplayString>
+      </Synthetic>
+      <Synthetic Name="[type]" Condition="type==7">
+        <DisplayString>FLOAT64</DisplayString>
+      </Synthetic>
+
+
+      <Item Name="[channels]">channels</Item>
+
+      <Item Name="[width]">width</Item>
+
+      <Item Name="[height]">height</Item>
+
+      <Item Name="[data]">data</Item>
+
+      <Item Name="[stride]" Condition="type==0">width*channels</Item>
+      <Item Name="[stride]" Condition="type==1">width*channels</Item>
+      <Item Name="[stride]" Condition="type==2">width*channels*2</Item>
+      <Item Name="[stride]" Condition="type==3">width*channels*2</Item>
+      <Item Name="[stride]" Condition="type==4">width*channels*4</Item>
+      <Item Name="[stride]" Condition="type==5">width*channels*4</Item>
+      <Item Name="[stride]" Condition="type==6">width*channels*4</Item>
+      <Item Name="[stride]" Condition="type==7">width*channels*8</Item>
+
+    </Expand>
+
+  </Type>
+
+</AutoVisualizer>
