@@ -12,6 +12,8 @@ int main(int argc, char * argv[])
 		auto gjpg2 = img::boxFilter<11>(gjpg);
 		img::imshow("jpg23", gjpg2);
 
+		auto intImg = img::intImage_1C(gjpg);
+		img::imshow("int", intImg);
 		img::imshow("jpg2", jpg2);
 		img::imshow("gjpg", gjpg);
 		//img::imshow("png", png);

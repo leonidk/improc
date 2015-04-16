@@ -37,18 +37,32 @@ namespace img {
 			return output;
 		}
 		template <typename T, typename TT>
-		Image _intImage_1C(const Image & input,int outType){
-			Image output = { std::shared_ptr<void>(new TT[input.width*input.height*input.channels]), outType, input.width, input.height, input.channels };
+		Image _intImage_1C(const Image & input){
+			//Image output = { std::shared_ptr<void>(new TT[(input.width+1)*(input.height+1)*input.channels]), getIMType<TT>(), input.width+1, input.height+1, input.channels };
+			Image output = { std::shared_ptr<void>(new TT[(input.width)*(input.height)*input.channels]), getIMType<TT>(), input.width, input.height, input.channels };
+
 			T* in_data = (T*)input.data.get();
 			TT* ot_data = (TT*)output.data.get();
+			//auto stride = input.width + 1;
+			//for (int x = 0; x < stride; x++) {
+			//	ot_data[x] = 0;
+			//}
+			//for (int y = 1; y < input.height+1; y++) {
+			//	ot_data[y*stride] = 0;
+			//	TT sum = 0;
+			//	for (int x = 0; x < input.width ; x++) {
+			//		sum += in_data[(y-1)*input.width + x];
+			//		ot_data[y*stride + x + 1] = sum + ot_data[(y - 1)*stride + x + 1];
+			//	}
+			//}
 			for (int x = 0; x < input.width; x++) {
-				ot_data[x] = in_data[x]
+				ot_data[x] = in_data[x];
 			}
-			for (int y = 1 y < input.height; y++) {
+			for (int y = 1; y < input.height; y++) {
 				TT sum = 0;
-				for (int x = 0; x < input.width ; x++) {
-					sum += in_data[y*input.width + x];
-					ot_data = sum + in_data[(y-1)*input.width + x];
+				for (int x = 0; x < input.width; x++) {
+					sum += in_data[(y-1)*input.width + x];
+					ot_data[y*input.width + x] = sum + ot_data[(y - 1)*input.width + x];
 				}
 			}
 			return output;
@@ -94,6 +108,7 @@ namespace img {
 			return output;
 		}
 	}
+
 	template <int k_w>
 	Image boxFilter(const Image & input){
 		switch (input.type) {
@@ -157,6 +172,28 @@ namespace img {
 			return detail::_Rgb2grey<float, float>(input);
 		case IM_64F:
 			return detail::_Rgb2grey<double, double>(input);
+		default:
+			return{};
+		}
+	}
+	Image intImage_1C(const Image & input){
+		switch (input.type) {
+		case IM_8U:
+			return detail::_intImage_1C<uint8_t, uint32_t>(input);
+		case IM_8I:
+			return detail::_intImage_1C<int8_t, int32_t>(input);
+		case IM_16U:
+			return detail::_intImage_1C<uint16_t, uint32_t>(input);
+		case IM_16I:
+			return detail::_intImage_1C<int16_t, int32_t>(input);
+		case IM_32U:
+			return detail::_intImage_1C<uint32_t, uint32_t>(input);
+		case IM_32I:
+			return detail::_intImage_1C<int32_t, int32_t>(input);
+		case IM_32F:
+			return detail::_intImage_1C<float, float>(input);
+		case IM_64F:
+			return detail::_intImage_1C<double, double>(input);
 		default:
 			return{};
 		}
