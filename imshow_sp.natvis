@@ -10,7 +10,7 @@
                 MenuName="Add to Image Watch"/>
 
 
-  <Type Name="img::Image">
+  <Type Name="img::Image&lt;*,*&gt;">
 
     <UIVisualizer ServiceId="{A452AFEA-3DF6-46BB-9177-C0B08F318025}" Id="1" />
 
@@ -18,37 +18,37 @@
 
 
 
-  <Type Name="img::Image">
+  <Type Name="img::Image&lt;*,*&gt;">
 
     <Expand>
 
-      <Synthetic Name="[type]" Condition="type==0">
+      <Synthetic Name="[type]" Condition='strcmp("unsigned char", "$T1") == 0'>
         <DisplayString>UINT8</DisplayString>
       </Synthetic>
-      <Synthetic Name="[type]" Condition="type==1">
+      <Synthetic Name="[type]" Condition='strcmp("char", "$T1") == 0'>
         <DisplayString>INT8</DisplayString>
       </Synthetic>
-      <Synthetic Name="[type]" Condition="type==2">
+      <Synthetic Name="[type]" Condition='strcmp("unsigned short", "$T1") == 0'>
         <DisplayString>UINT16</DisplayString>
       </Synthetic>
-      <Synthetic Name="[type]" Condition="type==3">
+      <Synthetic Name="[type]" Condition='strcmp("short", "$T1") == 0'>
         <DisplayString>INT16</DisplayString>
       </Synthetic>
-      <Synthetic Name="[type]" Condition="type==4">
+      <Synthetic Name="[type]" Condition='strcmp("int", "$T1") == 0'>
         <DisplayString>INT32</DisplayString>
       </Synthetic>
-      <Synthetic Name="[type]" Condition="type==5">
+      <Synthetic Name="[type]" Condition='strcmp("unsigned int", "$T1") == 0'>
         <DisplayString>INT32</DisplayString>
       </Synthetic>
-      <Synthetic Name="[type]" Condition="type==6">
+      <Synthetic Name="[type]" Condition='strcmp("float", "$T1") == 0'>
         <DisplayString>FLOAT32</DisplayString>
       </Synthetic>
-      <Synthetic Name="[type]" Condition="type==7">
+      <Synthetic Name="[type]" Condition='strcmp("double", "$T1") == 0'>
         <DisplayString>FLOAT64</DisplayString>
       </Synthetic>
 
 
-      <Item Name="[channels]">channels</Item>
+      <Item Name="[channels]">$T2</Item>
 
       <Item Name="[width]">width</Item>
 
@@ -56,14 +56,8 @@
 
       <Item Name="[data]">data._Ptr</Item>
 
-      <Item Name="[stride]" Condition="type==0">width*channels</Item>
-      <Item Name="[stride]" Condition="type==1">width*channels</Item>
-      <Item Name="[stride]" Condition="type==2">width*channels*2</Item>
-      <Item Name="[stride]" Condition="type==3">width*channels*2</Item>
-      <Item Name="[stride]" Condition="type==4">width*channels*4</Item>
-      <Item Name="[stride]" Condition="type==5">width*channels*4</Item>
-      <Item Name="[stride]" Condition="type==6">width*channels*4</Item>
-      <Item Name="[stride]" Condition="type==7">width*channels*8</Item>
+      <Item Name="[stride]">width*sizeof($T1)*$T2</Item>
+
 
     </Expand>
 

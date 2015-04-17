@@ -10,6 +10,37 @@
 
 #pragma comment( lib, "opengl32" )
 namespace img {
+	template <int C>
+	inline int getGLChan();
+
+	template <>
+	inline int getGLChan<1>() { return GL_LUMINANCE; }
+	template <>
+	inline int getGLChan<2>() { return GL_LUMINANCE_ALPHA; }
+	template <>
+	inline int getGLChan<3>() { return GL_RGB; }
+	template <>
+	inline int getGLChan<4>() { return GL_RGBA; }
+
+	template <typename T>
+	inline int getGLType();
+
+	template <>
+	inline int getGLType<uint8_t>() { return GL_UNSIGNED_BYTE; }
+	template <>
+	inline int getGLType<int8_t>() { return GL_BYTE; }
+	template <>
+	inline int getGLType<uint16_t>() { return GL_UNSIGNED_SHORT; }
+	template <>
+	inline int getGLType<int16_t>() { return GL_SHORT; }
+	template <>
+	inline int getGLType<uint32_t>() { return GL_UNSIGNED_INT; }
+	template <>
+	inline int getGLType<int32_t>() { return GL_INT; }
+	template <>
+	inline int getGLType<float>() { return GL_FLOAT; }
+	template <>
+	inline int getGLType<double>() { return GL_DOUBLE; }
 	struct glfwState {
 		glfwState() { glfwInit(); }
 		~glfwState() { glfwTerminate(); }
@@ -52,8 +83,8 @@ namespace img {
 			}
 		}
 	}
-
-	void imshow(const char * name, const Image & img){
+	template <typename T, int C>
+	void imshow(const char * name, const Image<T,C> & img){
 		std::unique_lock<std::mutex> lock(g_mutex);
 		std::string s_name(name);
 		if (img.data.get() == NULL || img.height*img.width == 0)
@@ -76,51 +107,7 @@ namespace img {
 		glClear(GL_COLOR_BUFFER_BIT);
 		glBindTexture(GL_TEXTURE_2D, window.tex);
 
-		GLuint format, type;
-		switch (img.type) {
-		case IM_8U:
-			type = GL_UNSIGNED_BYTE;
-			break;
-		case IM_8I:
-			type = GL_BYTE;
-			break;
-		case IM_16U:
-			type = GL_UNSIGNED_SHORT;
-			break;
-		case IM_16I:
-			type = GL_SHORT;
-			break;
-		case IM_32U:
-			type = GL_UNSIGNED_INT;
-			break;
-		case IM_32I:
-			type = GL_INT;
-			break;
-		case IM_32F:
-			type = GL_FLOAT;
-			break;
-		case IM_64F:
-			type = GL_DOUBLE;
-			break;
-		default:
-			return;
-		}
-		switch (img.channels) {
-		case 0:
-		case 1:
-			format = GL_LUMINANCE;
-			break;
-		case 2:
-			format = GL_LUMINANCE_ALPHA;
-			break;
-		case 3:
-			format = GL_RGB;
-			break;
-		case 4:
-			format = GL_RGBA;
-			break;
-		}
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width, img.height, 0, format, type, img.data.get());
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width, img.height, 0, getGLChan<C>(), getGLType<T>(), img.data.get());
 
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -175,4 +162,8 @@ namespace img {
 		}
 		return g_key;
 	}
+	template void imshow(const char * name, const Image<uint8_t,1> &img);
+	template void imshow(const char * name, const Image<uint8_t, 3> &img);
+	template void imshow(const char * name, const Image<uint8_t, 4> &img);
+
 }

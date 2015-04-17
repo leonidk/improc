@@ -3,10 +3,14 @@
 
 namespace img {
 	//imio.cpp
-	Image imread(const char * name);
-	void imwrite(const char * name, const Image &img);
+	template <typename T,int C>
+	Image<T,C> imread(const char * name);
+
+	template <typename T, int C>
+	void imwrite(const char * name, const Image<T, C> &img);
 
 	//imshow.cpp
-	void imshow(const char * name, const Image &img);
+	template <typename T, int C>
+	void imshow(const char * name, const Image<T, C> &img);
 	char getKey(bool wait = false);
 }
