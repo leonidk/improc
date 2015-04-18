@@ -14,7 +14,7 @@ int main(int argc, char * argv[])
 		auto gjpg2 = img::boxFilter<11>(gjpg);
 		img::imshow("jpg23", gjpg2);
 
-		auto intImg = img::intImage_1C<uint8_t,uint32_t>(gjpg);
+		auto intImg = img::intImage<uint8_t,1,uint32_t>(gjpg);
 		img::imshow("gjpg", gjpg);
 		img::imshow("png", png);
 	} while( 'q' != img::getKey(false));

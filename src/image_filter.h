@@ -38,38 +38,48 @@ namespace img {
 			return output;
 		}
 
-		template <typename T, typename TT>
-		Image<TT, 1> _intImage_1C(const Image<T, 1> & input){
-			//Image output = { std::shared_ptr<void>(new TT[(input.width+1)*(input.height+1)*input.channels]), getIMType<TT>(), input.width+1, input.height+1, input.channels };
-			Image<TT, 1> output(input.width, input.height);
+		template <typename T, int C, typename TT>
+		Image<TT, C> _intImageInc(const Image<T, C> & input){
+			Image<TT, C> output(input.width, input.height);
 
 			T* in_data = (T*)input.data.get();
 			TT* ot_data = (TT*)output.data.get();
-			//auto stride = input.width + 1;
-			//for (int x = 0; x < stride; x++) {
-			//	ot_data[x] = 0;
-			//}
-			//for (int y = 1; y < input.height+1; y++) {
-			//	ot_data[y*stride] = 0;
-			//	TT sum = 0;
-			//	for (int x = 0; x < input.width ; x++) {
-			//		sum += in_data[(y-1)*input.width + x];
-			//		ot_data[y*stride + x + 1] = sum + ot_data[(y - 1)*stride + x + 1];
-			//	}
-			//}
-			for (int x = 0; x < input.width; x++) {
+			for (int x = 0; x < input.width*C; x++) {
 				ot_data[x] = in_data[x];
 			}
 			for (int y = 1; y < input.height; y++) {
-				TT sum = 0;
+				TT sum[C] = {};
 				for (int x = 0; x < input.width; x++) {
-					sum += in_data[(y-1)*input.width + x];
-					ot_data[y*input.width + x] = sum + ot_data[(y - 1)*input.width + x];
+					for (int c = 0; c < C; c++){
+						sum[c] += in_data[(y - 1)*input.width*C + x*C +c];
+						ot_data[y*input.width*C + x*C +c] = sum[c] + ot_data[(y - 1)*input.width*C + x*C + c];
+					}
 				}
 			}
 			return output;
 		}
+		template <typename T, int C, typename TT>
+		Image<TT, C> _intImageEx(const Image<T, C> & input){
+			Image<TT,C> output(input.width+1, input.height+1);
 
+			T* in_data = (T*)input.data.get();
+			TT* ot_data = (TT*)output.data.get();
+			auto stride = C*(input.width + 1);
+			for (int x = 0; x < stride; x++) {
+				ot_data[x] = 0;
+			}
+			for (int y = 1; y < input.height+1; y++) {
+				ot_data[y*stride] = 0;
+				TT sum[C] = {};
+				for (int x = 0; x < input.width ; x++) {
+					for (int c = 0; c < C; c++){
+						sum[c] += in_data[(y - 1)*input.width*C + x*C + c];
+						ot_data[y*stride + (x + 1)*C + c] = sum[c] + ot_data[(y - 1)*stride + (x + 1)*C + c];
+					}
+				}
+			}
+			return output;
+		}
 		template <typename T, int C, typename TT, int k_w>
 		Image<T, C> _boxFilter(const Image<T, C> & input){
 			Image<T, C> output(input.width, input.height);
@@ -145,10 +155,10 @@ namespace img {
 		return detail::_Rgb2grey<uint8_t, uint16_t>(input);
 	}
 
-	//intImage_1C
-	template <typename T,typename TT>
-	Image<TT, 1> intImage_1C(const Image<T, 1> & input){
-		return detail::_intImage_1C<T, TT>(input);
+	//intImage
+	template <typename T,int C,typename TT>
+	Image<TT, C> intImage(const Image<T, C> & input){
+		return detail::_intImageInc<T, C, TT>(input);
 	}
 
 }
