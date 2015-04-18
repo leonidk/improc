@@ -8,8 +8,10 @@
     <ClInclude Include="..\src\stb_image_write.h">
       <Filter>IO</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\image_io.h" />
     <ClInclude Include="..\src\image_filter.h" />
+    <ClInclude Include="..\src\image_io.h">
+      <Filter>IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Main.cpp" />

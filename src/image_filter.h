@@ -5,7 +5,7 @@ namespace img {
 	namespace detail {
 		template <typename T, typename TT>
 		Image<T, 3> _grey2Rgb(const Image<T, 1> & input){
-			Image<T, 3> output = { std::shared_ptr<T>(new T[input.width*input.height * 3]), input.width, input.height };
+			Image<T, 3> output(input.width, input.height);
 			T* in_data = (T*)input.data.get();
 			T* ot_data = (T*)output.data.get();
 			auto stride = input.width*3;
@@ -18,9 +18,10 @@ namespace img {
 			}
 			return output;
 		}
+
 		template <typename T, typename TT>
 		Image<T, 1> _Rgb2grey(const Image<T, 3> & input){
-			Image<T, 1> output = { std::shared_ptr<T>(new T[input.width*input.height]), input.width, input.height };
+			Image<T, 1> output(input.width, input.height);
 			T* in_data = (T*)input.data.get();
 			T* ot_data = (T*)output.data.get();
 			auto stride = input.width * 3;
@@ -36,10 +37,11 @@ namespace img {
 			}
 			return output;
 		}
+
 		template <typename T, typename TT>
 		Image<TT, 1> _intImage_1C(const Image<T, 1> & input){
 			//Image output = { std::shared_ptr<void>(new TT[(input.width+1)*(input.height+1)*input.channels]), getIMType<TT>(), input.width+1, input.height+1, input.channels };
-			Image<TT, 1> output = { std::shared_ptr<TT>(new TT[(input.width)*(input.height)]),input.width, input.height};
+			Image<TT, 1> output(input.width, input.height);
 
 			T* in_data = (T*)input.data.get();
 			TT* ot_data = (TT*)output.data.get();
@@ -67,9 +69,10 @@ namespace img {
 			}
 			return output;
 		}
+
 		template <typename T, int C, typename TT, int k_w>
 		Image<T, C> _boxFilter(const Image<T, C> & input){
-			Image<T, C> output = { std::shared_ptr<T>(new T[input.width*input.height*C]), input.width, input.height };
+			Image<T, C> output(input.width, input.height);
 			T* in_data = (T*)input.data.get();
 			T* ot_data = (T*)output.data.get();
 			memcpy(ot_data, in_data, sizeof(T)*input.width*input.height*C);
@@ -107,7 +110,8 @@ namespace img {
 			return output;
 		}
 	}
-
+	
+	//boxFilter
 	template <typename T,int C,int k_w>
 	Image<T, C> boxFilter(const Image<T, C> & input){
 			return detail::_boxFilter<T,C,T,k_w>(input);
@@ -120,7 +124,8 @@ namespace img {
 	Image<uint8_t, 3> boxFilter(const Image<uint8_t, 3> & input){
 		return detail::_boxFilter<uint8_t, 3, uint16_t, k_w>(input);
 	}
-
+	
+	//grey2Rgb
 	template <typename T>
 	Image<T, 3> grey2Rgb(const Image<T, 1> & input){
 			return detail::_grey2Rgb<T, T>(input);
@@ -130,6 +135,7 @@ namespace img {
 		return detail::_grey2Rgb<uint8_t, uint16_t>(input);
 	}
 
+	//Rgb2grey
 	template <typename T>
 	Image<T, 1> Rgb2grey(const Image<T, 3> & input){
 		return detail::_Rgb2grey<T, T>(input);
@@ -138,6 +144,8 @@ namespace img {
 	Image<uint8_t, 1> Rgb2grey(const Image<uint8_t, 3> & input){
 		return detail::_Rgb2grey<uint8_t, uint16_t>(input);
 	}
+
+	//intImage_1C
 	template <typename T,typename TT>
 	Image<TT, 1> intImage_1C(const Image<T, 1> & input){
 		return detail::_intImage_1C<T, TT>(input);

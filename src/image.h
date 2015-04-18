@@ -6,14 +6,15 @@ namespace img {
 	struct Image {
 		std::shared_ptr<T> data;
 		int width, height;
+		Image() : data(nullptr),width(0),height(0) {}
+		Image(int width, int height) : data(new T[width*height*C], arr_d<T>()),width(width),height(height) {}
+		Image(int width, int height, T* d) : data(d, null_d<T>), width(width), height(height)  {}
+
+		template< typename T >
+		struct null_d { void operator ()(T const * p)	{ } };
+		template< typename T >
+		struct arr_d { void operator ()(T const * p)	{ delete[] p; } };
 	};
-	///useful for non-owning calls:
-	//		img::imshow("tmp", { { tmp, img::null_d }, img::IM_8U, 320, 240, 1 });
-	static auto null_d = [](const void * p){};
 
-	//visual studio doesn't seem to care about needing this to allocate arrays
-	//although it should probably be needed?
-	template< typename T >
-	struct arr_d {void operator ()(T const * p)	{ delete[] p; } };
-
+	template<typename T> using Img = Image<T, 1>;
 }
