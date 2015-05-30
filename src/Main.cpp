@@ -9,6 +9,9 @@
 #endif
 #include <vector>
 #include <fstream>
+#include <random>
+#include <tuple>
+
 std::vector<img::Img<uint8_t>> readMNISTImg(const std::string &fileName)
 {
 	std::vector<img::Img<uint8_t>> imgs;
@@ -50,16 +53,50 @@ std::vector<uint8_t> readMNISTLabel(const std::string &fileName)
 		magic_number = bSwap(magic_number);
 		file.read((char*)&n_items, sizeof(n_items));
 		n_items = bSwap(n_items);
-		for (int i = 0; i<n_items; ++i)
-		{
-			uint8_t label;
-			file.read((char*)&label, 1);
-			labels.push_back(label);
-		}
+		labels.resize(n_items);
+		file.read((char*)labels.data(), n_items);
 	}
 	return labels;
 }
 
+class FernClassifier {
+public:
+	FernClassifier(int fernSize, int numFerns, int numClasses)
+		: fernSize(fernSize), numFerns(numFerns), numClasses(numClasses),
+		probs((1 << (fernSize))*(numClasses)*(numFerns), 1), 
+		counts((numClasses)*(numFerns), (1 << (fernSize))),
+		features(fernSize*numFerns)
+	{
+	}
+	void sampleFeatureFerns(int w, int h) 
+	{
+		std::uniform_int_distribution<int> wDist(0, w - 1);
+		std::uniform_int_distribution<int> hDist(0, h - 1);
+
+		for (int f = 0; f < numFerns; f++) {
+			for (int d = 0; d < fernSize; d++) {
+				features[f*fernSize + d] = std::make_tuple(wDist(gen), hDist(gen), wDist(gen), hDist(gen));
+			}
+		}
+		probs = std::vector<float>((1 << (fernSize))*(numClasses)*(numFerns), 1);
+		counts = std::vector<float>((numClasses)*(numFerns), (1 << (fernSize)));
+	}
+	void train(const img::Img<uint8_t> & img, const uint8_t label) {
+
+	}
+	uint8_t predict(const img::Img<uint8_t> & img) {
+
+	}
+private:
+	std::mt19937 gen;
+
+	std::vector<float> probs; // 2^fernSize x numClasses x numFerns
+	std::vector<float> counts; // numClasses x numFerns
+	std::vector<std::tuple<uint8_t, uint8_t, uint8_t, uint8_t>> features; // fernSize x numFerns. i(0,1) > i(2,3)
+
+	int fernSize, numFerns, numClasses;
+
+};
 
 int main(int argc, char * argv[])
 {
