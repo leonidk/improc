@@ -64,6 +64,8 @@ std::vector<uint8_t> readMNISTLabel(const std::string &fileName)
 
 #include <cereal/types/vector.hpp>
 #include <cereal/types/tuple.hpp>
+std::random_device rd;
+std::mt19937 gen(rd());
 
 class FernClassifier {
 public:
@@ -73,14 +75,12 @@ public:
 		counts((numClasses), (1 << (fernSize))),
 		features(fernSize*numFerns)
 	{
-;
 	}
 	void sampleFeatureFerns(int w, int h) 
 	{
 		std::uniform_int_distribution<int> wDist(0, w - 1);
 		std::uniform_int_distribution<int> hDist(0, h - 1);
-		std::random_device rd;
-		gen = std::mt19937(rd());
+
 		for (int f = 0; f < numFerns; f++) {
 			for (int d = 0; d < fernSize; d++) {
 				features[f*fernSize + d] = std::make_tuple(wDist(gen), hDist(gen), wDist(gen), hDist(gen));
@@ -94,8 +94,6 @@ public:
 		std::uniform_int_distribution<int> wDist(0, w - 1);
 		std::uniform_int_distribution<int> hDist(0, h - 1);
 		std::uniform_int_distribution<int> fDist(0, numFerns - 1);
-		std::random_device rd;
-		gen = std::mt19937(rd());
 		auto f = fDist(gen);
 		for (int d = 0; d < fernSize; d++) {
 			features[f*fernSize + d] = std::make_tuple(wDist(gen), hDist(gen), wDist(gen), hDist(gen));
@@ -111,8 +109,6 @@ public:
 		std::uniform_int_distribution<int> fDist(0, numFerns - 1);
 		std::uniform_int_distribution<int> ftDist(0, fernSize - 1);
 
-		std::random_device rd;
-		gen = std::mt19937(rd());
 		auto f = fDist(gen);
 		auto d = ftDist(gen);
 		features[f*fernSize + d] = std::make_tuple(wDist(gen), hDist(gen), wDist(gen), hDist(gen));
@@ -185,8 +181,6 @@ public:
 		ar(features);
 	}
 private:
-	std::mt19937 gen;
-
 	std::vector<float> probs; // 2^fernSize x numClasses x numFerns
 	std::vector<float> counts; // numClasses
 	std::vector<std::tuple<uint8_t, uint8_t, uint8_t, uint8_t>> features; // fernSize x numFerns. i(0,1) > i(2,3)
@@ -199,19 +193,24 @@ int main(int argc, char * argv[])
 {
 	auto train_img = readMNISTImg("train-images.idx3-ubyte");
 	auto train_lbl = readMNISTLabel("train-labels.idx1-ubyte");
-	//auto test_img = readMNISTImg("train-images.idx3-ubyte");
-	//auto test_lbl = readMNISTLabel("train-labels.idx1-ubyte");
-	auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
-	auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
-	FernClassifier fc(10, 25, 10);
+	auto test_img = readMNISTImg("train-images.idx3-ubyte");
+	auto test_lbl = readMNISTLabel("train-labels.idx1-ubyte");
+	//auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
+	//auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
+	FernClassifier fc(13, 10, 10);
 	{
 		//83_out.json
-		std::ifstream is("95_out.json", std::ios::binary);
+		std::ifstream is("97_out.json", std::ios::binary);
 		cereal::JSONInputArchive archive(is);
 		archive(fc);
 	}
 	FernClassifier bestFC = fc;
-	float bestAcc = 0.93;
+	float bestAcc = 0.968;
+	int iter = 0;
+	int iterations = 2500;
+	float startTmp = 1.0;
+	float tmpFactor = 0.9;
+	float temp = startTmp;
 	while (true) {
 		fc = bestFC;
 		//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
@@ -230,6 +229,13 @@ int main(int argc, char * argv[])
 		}
 		float meanAccuracy = correct / test_img.size();
 		std::cout << meanAccuracy << std::endl;
+		auto sqr = [](float x) { return x*x; };
+		temp = sqr(0.15*((float)(iterations - iter)) / ((float)iterations));
+		float cost = exp(-(bestAcc - meanAccuracy) / temp);
+		std::uniform_real_distribution<float> cDist(0, 1.0f);
+		//temp *= tmpFactor;
+		float sample = cDist(gen);
+
 		if (meanAccuracy > bestAcc)
 		{
 			bestFC = fc;
@@ -238,6 +244,20 @@ int main(int argc, char * argv[])
 			std::ofstream os(std::to_string(std::round(meanAccuracy*100)).substr(0,2) + "_out.json", std::ios::binary);
 			cereal::JSONOutputArchive archive(os);
 			archive(fc);
+		}
+		else if (cost > sample) {
+			bestFC = fc;
+			std::cout << "accepted" << std::endl;
+		}
+		std::cout << "Sample " << cost << " " << sample << std::endl;
+
+		iterations++;
+		if (iter >= iterations) {
+			iter = 0;
+			fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
+			bestFC = fc;
+			bestAcc = 0.0;
+			temp = startTmp;
 		}
 	}
 	/*
