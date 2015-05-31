@@ -73,19 +73,50 @@ public:
 		counts((numClasses), (1 << (fernSize))),
 		features(fernSize*numFerns)
 	{
-		std::random_device rd;
-		gen = std::mt19937(rd());
+;
 	}
 	void sampleFeatureFerns(int w, int h) 
 	{
 		std::uniform_int_distribution<int> wDist(0, w - 1);
 		std::uniform_int_distribution<int> hDist(0, h - 1);
-
+		std::random_device rd;
+		gen = std::mt19937(rd());
 		for (int f = 0; f < numFerns; f++) {
 			for (int d = 0; d < fernSize; d++) {
 				features[f*fernSize + d] = std::make_tuple(wDist(gen), hDist(gen), wDist(gen), hDist(gen));
 			}
 		}
+		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
+		counts = std::vector<float>((numClasses), (1 << (fernSize)));
+	}
+	void sampleOneFern(int w, int h)
+	{
+		std::uniform_int_distribution<int> wDist(0, w - 1);
+		std::uniform_int_distribution<int> hDist(0, h - 1);
+		std::uniform_int_distribution<int> fDist(0, numFerns - 1);
+		std::random_device rd;
+		gen = std::mt19937(rd());
+		auto f = fDist(gen);
+		for (int d = 0; d < fernSize; d++) {
+			features[f*fernSize + d] = std::make_tuple(wDist(gen), hDist(gen), wDist(gen), hDist(gen));
+		}
+
+		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
+		counts = std::vector<float>((numClasses), (1 << (fernSize)));
+	}
+	void sampleOneFeature(int w, int h)
+	{
+		std::uniform_int_distribution<int> wDist(0, w - 1);
+		std::uniform_int_distribution<int> hDist(0, h - 1);
+		std::uniform_int_distribution<int> fDist(0, numFerns - 1);
+		std::uniform_int_distribution<int> ftDist(0, fernSize - 1);
+
+		std::random_device rd;
+		gen = std::mt19937(rd());
+		auto f = fDist(gen);
+		auto d = ftDist(gen);
+		features[f*fernSize + d] = std::make_tuple(wDist(gen), hDist(gen), wDist(gen), hDist(gen));
+
 		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
 		counts = std::vector<float>((numClasses), (1 << (fernSize)));
 	}
@@ -168,12 +199,25 @@ int main(int argc, char * argv[])
 {
 	auto train_img = readMNISTImg("train-images.idx3-ubyte");
 	auto train_lbl = readMNISTLabel("train-labels.idx1-ubyte");
+	//auto test_img = readMNISTImg("train-images.idx3-ubyte");
+	//auto test_lbl = readMNISTLabel("train-labels.idx1-ubyte");
 	auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
 	auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
 	FernClassifier fc(8, 10, 10);
-	float bestAcc = 0;
+	{
+		//83_out.json
+		std::ifstream is("94_out.json", std::ios::binary);
+		cereal::JSONInputArchive archive(is);
+		archive(fc);
+	}
+	//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
+	FernClassifier bestFC = fc;
+	float bestAcc = 1.0;
 	while (true) {
-		fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
+		fc = bestFC;
+		//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
+		//fc.sampleOneFern(train_img[0].width, train_img[0].height);
+		fc.sampleOneFeature(train_img[0].width, train_img[0].height);
 		for (int i = 0; i < train_img.size(); i++) {
 			fc.train(train_img[i], train_lbl[i]);
 		}
@@ -189,6 +233,7 @@ int main(int argc, char * argv[])
 		std::cout << meanAccuracy << std::endl;
 		if (meanAccuracy > bestAcc)
 		{
+			bestFC = fc;
 			bestAcc = meanAccuracy;
 			std::cout << "NewBest" << std::endl;
 			std::ofstream os(std::to_string(std::round(meanAccuracy*100)).substr(0,2) + "_out.json", std::ios::binary);
