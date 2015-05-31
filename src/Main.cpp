@@ -206,6 +206,7 @@ int main(int argc, char * argv[])
 	}
 	FernClassifier bestFC = fc;
 	float bestAcc = 0.968;
+	float pAcc = bestAcc;
 	int iter = 0;
 	int iterations = 2500;
 	float startTmp = 1.0;
@@ -230,8 +231,9 @@ int main(int argc, char * argv[])
 		float meanAccuracy = correct / test_img.size();
 		std::cout << meanAccuracy << std::endl;
 		auto sqr = [](float x) { return x*x; };
-		temp = sqr(0.15*((float)(iterations - iter)) / ((float)iterations));
-		float cost = exp(-(bestAcc - meanAccuracy) / temp);
+		auto CONST = 0.15f;
+		temp = sqr(CONST*((float)(iterations - iter)) / ((float)iterations));
+		float cost = exp(-(pAcc - meanAccuracy) / temp);
 		std::uniform_real_distribution<float> cDist(0, 1.0f);
 		//temp *= tmpFactor;
 		float sample = cDist(gen);
@@ -240,13 +242,20 @@ int main(int argc, char * argv[])
 		{
 			bestFC = fc;
 			bestAcc = meanAccuracy;
+			pAcc = meanAccuracy;
 			std::cout << "NewBest" << std::endl;
 			std::ofstream os(std::to_string(std::round(meanAccuracy*100)).substr(0,2) + "_out.json", std::ios::binary);
 			cereal::JSONOutputArchive archive(os);
 			archive(fc);
 		}
+		else if (meanAccuracy > pAcc) {
+			bestFC = fc;
+			pAcc = meanAccuracy;
+			std::cout << "acceptedBetter" << std::endl;
+		}
 		else if (cost > sample) {
 			bestFC = fc;
+			pAcc = meanAccuracy;
 			std::cout << "accepted" << std::endl;
 		}
 		std::cout << "Sample " << cost << " " << sample << std::endl;
@@ -257,6 +266,7 @@ int main(int argc, char * argv[])
 			fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
 			bestFC = fc;
 			bestAcc = 0.0;
+			pAcc = 0.0;
 			temp = startTmp;
 		}
 	}
