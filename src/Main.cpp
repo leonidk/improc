@@ -203,16 +203,15 @@ int main(int argc, char * argv[])
 	//auto test_lbl = readMNISTLabel("train-labels.idx1-ubyte");
 	auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
 	auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
-	FernClassifier fc(8, 10, 10);
+	FernClassifier fc(10, 25, 10);
 	{
 		//83_out.json
-		std::ifstream is("94_out.json", std::ios::binary);
+		std::ifstream is("95_out.json", std::ios::binary);
 		cereal::JSONInputArchive archive(is);
 		archive(fc);
 	}
-	//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
 	FernClassifier bestFC = fc;
-	float bestAcc = 1.0;
+	float bestAcc = 0.93;
 	while (true) {
 		fc = bestFC;
 		//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
