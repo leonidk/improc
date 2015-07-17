@@ -1,6 +1,6 @@
 #pragma once
 #include "image.h"
-
+#include <cstring>
 namespace img {
 	namespace detail {
 		template <typename T, typename TT>

@@ -1,13 +1,14 @@
 #include "image.h"
-#include <GLFW\glfw3.h>
+#include <GLFW/glfw3.h>
 #include <mutex>
 #include <unordered_map>
 #include <string>
 #include <stdint.h>
 #include <memory>
 #include <iostream>
-
-
+#include <vector>
+#include <cmath>
+#include <cstring>
 #pragma comment( lib, "opengl32" )
 namespace img {
 	template <int C>
