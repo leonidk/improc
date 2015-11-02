@@ -114,7 +114,9 @@ public:
 		auto d = ftDist(gen);
 		auto which = ft(gen);
 		auto curr = features[f*fernSize + d];
-		features[f*fernSize + d] = which ? std::make_tuple(std::get<0>(curr), std::get<1>(curr), wDist(gen), hDist(gen)) : std::make_tuple(wDist(gen), hDist(gen), std::get<2>(curr), std::get<3>(curr));
+		features[f*fernSize + d] = which ? 
+            std::make_tuple((uint8_t)std::get<0>(curr), (uint8_t)std::get<1>(curr), (uint8_t)wDist(gen), (uint8_t)hDist(gen)) : 
+            std::make_tuple((uint8_t)wDist(gen), (uint8_t)hDist(gen), (uint8_t)std::get<2>(curr), (uint8_t)std::get<3>(curr));
 
 		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
 		counts = std::vector<float>((numClasses), (1 << (fernSize)));
