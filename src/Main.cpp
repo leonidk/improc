@@ -141,6 +141,59 @@ public:
 		counts[label]++;
 
 	}
+	void sampleNewFernEntropy(int w, int h) {
+		std::vector<float> fernClassProbs(numFerns*numClasses, 0); //tem
+		std::vector<float> fernSumProbs(numFerns, 0); //nrmzs
+		std::vector<float> fernSumInfo(numFerns*numClasses, 0); //nrmzs
+
+		std::vector<float> classProbs(numClasses, 0);
+
+		for (int f = 0; f < numFerns; f++) {
+			float sum = 0;
+			float ent = 0;
+			for (int c = 0; c < numClasses; c++) {
+				for (int l = 0; l < twoFernSize; l++) {
+					sum +=  static_cast<float>(probs[f*(numClasses*twoFernSize) + c*twoFernSize + l]);
+				}
+			}
+			for (int c = 0; c < numClasses; c++) {
+				for (int l = 0; l < twoFernSize; l++) {
+					auto p = static_cast<float>(probs[f*(numClasses*twoFernSize) + c*twoFernSize + l]) / sum;
+					ent -= p * logf(p);
+				}
+			}
+			fernSumProbs[f] = ent;
+			/*
+			for (int c = 0; c < numClasses; c++) {
+				float ent = 0;
+				for (int l = 0; l < twoFernSize; l++) {
+					auto p = static_cast<float>(probs[f*(numClasses*twoFernSize) + c*twoFernSize + l]) / sum;
+					ent -= p * logf(p);
+				}
+				fernSumInfo[f*numClasses + c] = ent;
+			}*/
+			//for (int c = 0; c < numClasses; c++) {
+			//	float ent = 0;
+
+			//	for (int l = 0; l < twoFernSize; l++) {
+			//		auto p = static_cast<float>(probs[f*(numClasses*twoFernSize) + c*twoFernSize + l])/counts[c];
+			//		ent -= p * logf(p);
+			//	}
+			//	fernClassProbs[f*numClasses + c] = ent;
+			//}
+		}
+		int max_ent_fern = std::min_element(fernSumProbs.begin(), fernSumProbs.end()) - fernSumProbs.begin();
+		std::uniform_int_distribution<int> wDist(0, w - 1);
+		std::uniform_int_distribution<int> hDist(0, h - 1);
+		for (int d = 0; d < fernSize; d++) {
+			features[max_ent_fern*fernSize + d] = std::make_tuple(wDist(gen), hDist(gen), wDist(gen), hDist(gen));
+		}
+
+		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
+		counts = std::vector<float>((numClasses), (1 << (fernSize)));
+		//int max_prob_class = std::max_element(classProbs.begin(), classProbs.end()) - classProbs.begin();
+		//return max_prob_class;
+	}
 	//void finishTraining() 
 	uint8_t predict(const img::Img<uint8_t> & img) {
 		std::vector<float> fernClassProbs(numFerns*numClasses, 0); //tem
@@ -196,21 +249,18 @@ int main(int argc, char * argv[])
 {
 	auto train_img = readMNISTImg("train-images.idx3-ubyte");
 	auto train_lbl = readMNISTLabel("train-labels.idx1-ubyte");
-	//auto test_img = readMNISTImg("train-images.idx3-ubyte");
-	//auto test_lbl = readMNISTLabel("train-labels.idx1-ubyte");
 	auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
 	auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
-	FernClassifier fc(13, 10, 10);
+	FernClassifier fc(10, 20, 10);
 	fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
 
-	{
-		//83_out.json
+	if (false) {
 		std::ifstream is("97_out_7.json", std::ios::binary);
 		cereal::JSONInputArchive archive(is);
 		archive(fc);
 	}
 	FernClassifier bestFC = fc;
-	float bestAcc = 1.0;
+	float bestAcc = 0.0;
 	float pAcc = bestAcc;
 	int iter = 0;
 	int iterations = 15000;
@@ -222,9 +272,9 @@ int main(int argc, char * argv[])
 
 	while (true) {
 		fc = bestFC;
-		//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
+		fc.sampleNewFernEntropy(train_img[0].width, train_img[0].height);
+
 		//fc.sampleOneFern(train_img[0].width, train_img[0].height);
-		//fc.sampleOneFeature(train_img[0].width, train_img[0].height);
 		for (int i = 0; i < train_img.size(); i++) {
 			fc.train(train_img[i], train_lbl[i]);
 		}
@@ -237,14 +287,7 @@ int main(int argc, char * argv[])
 				correct++;
 		}
 		float meanAccuracy = correct / test_img.size();
-		//std::cout << meanAccuracy << std::endl;
-		auto sqr = [](float x) { return x*x; };
-		auto CONST = 0.1f;
-		//temp = CONST*sqr(((float)(iterations - iter)) / ((float)iterations));
-		float cost = exp(-(pAcc - meanAccuracy) / temp);
-		std::uniform_real_distribution<float> cDist(0, 1.0f);
-		temp = std::max(tmpFactor*temp, minTmp);
-		float sample = cDist(gen);
+		//fc.sampleNewFernEntropy(train_img[0].width, train_img[0].height);
 
 		if (meanAccuracy > bestAcc)
 		{
@@ -261,13 +304,8 @@ int main(int argc, char * argv[])
 			pAcc = meanAccuracy;
 			std::cout << "acceptedBetter" << std::endl;
 		}
-		else if (cost > sample) {
-			bestFC = fc;
-			pAcc = meanAccuracy;
-			std::cout << "accepted" << std::endl;
-		}
 
-		std::cout << meanAccuracy <<"\t" << cost << "\t" << sample << "\t" << iter << "\t" << temp << std::endl;
+		std::cout << meanAccuracy << "\t" << iter << "\t" << temp << std::endl;
 
 		iter++;
 		if (iter >= iterations) {
@@ -278,27 +316,5 @@ int main(int argc, char * argv[])
 			temp = startTmp;
 		}
 	}
-	/*
-	int idx = 0;
-	do {
-		auto tl = train_lbl[idx];
-		auto t1 = train_img[idx++];
-		img::imshow("label",t1);
-		auto jpg = img::imread<uint8_t,3>("test.jpg");
-		auto png = img::imread<uint8_t, 3>("test.png");
-		auto jpg2 = img::boxFilter<11>(jpg);
-		img::imshow("jpg", jpg);
-		img::imshow("jpg2", jpg2);
-
-		auto gjpg = img::Rgb2grey(jpg);
-		jpg2 = img::grey2Rgb(gjpg);
-		auto gjpg2 = img::boxFilter<11>(gjpg);
-		img::imshow("jpg23", gjpg2);
-
-		auto intImg = img::intImage<uint8_t,1,uint32_t>(gjpg);
-		img::imshow("gjpg", gjpg);
-		img::imshow("png", png);
-	} while( 'q' != img::getKey(false));
-	*/
 	return 0;
 }
