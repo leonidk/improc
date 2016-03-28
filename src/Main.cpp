@@ -166,7 +166,7 @@ public:
 		for (int c = 0; c < numClasses; c++) {
 			auto prob = 1.0;
 			for (int f = 0; f < numFerns; f++) {
-				prob *= fernClassProbs[f*numClasses + c];
+				prob += logf(fernClassProbs[f*numClasses + c]);
 			}
 			classProbs[c] = prob;
 		}
@@ -196,16 +196,17 @@ private:
 
 int main(int argc, char * argv[])
 {
-	auto train_img = readMNISTImg("train-images.idx3-ubyte");
-	auto train_lbl = readMNISTLabel("train-labels.idx1-ubyte");
-	//auto test_img = readMNISTImg("train-images.idx3-ubyte");
-	//auto test_lbl = readMNISTLabel("train-labels.idx1-ubyte");
-	auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
-	auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
-	FernClassifier fc(13, 10, 10);
-	fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
+	auto train_img = readMNISTImg("train-images-idx3-ubyte");
+	auto train_lbl = readMNISTLabel("train-labels-idx1-ubyte");
+	auto test_img = readMNISTImg("train-images-idx3-ubyte");
+	auto test_lbl = readMNISTLabel("train-labels-idx1-ubyte");
+	//auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
+	//auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
+	FernClassifier fc(13, 50, 10);
+    printf("%d %d\n",train_img[0].width,train_img[0].height);
+    fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
 
-	{
+	if(false){
 		//83_out.json
 		std::ifstream is("97_out_7.json", std::ios::binary);
 		cereal::JSONInputArchive archive(is);
@@ -225,7 +226,7 @@ int main(int argc, char * argv[])
 	while (true) {
 		fc = bestFC;
 		//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
-		//fc.sampleOneFern(train_img[0].width, train_img[0].height);
+		fc.sampleOneFern(train_img[0].width, train_img[0].height);
 		//fc.sampleOneFeature(train_img[0].width, train_img[0].height);
 		for (int i = 0; i < train_img.size(); i++) {
 			fc.train(train_img[i], train_lbl[i]);
