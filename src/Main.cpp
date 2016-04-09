@@ -31,7 +31,7 @@ std::vector<img::Img<uint8_t>> readMNISTImg(const std::string &fileName)
 		n_rows = bSwap(n_rows);
 		file.read((char*)&n_cols, sizeof(n_cols));
 		n_cols = bSwap(n_cols);
-		for (int i = 0; i<number_of_images; ++i)
+		for (uint32_t i = 0; i<number_of_images; ++i)
 		{
 			img::Img<uint8_t> img(n_cols,n_rows);
 			file.read((char*)img.data.get(), n_rows*n_cols);
@@ -64,6 +64,7 @@ std::vector<uint8_t> readMNISTLabel(const std::string &fileName)
 
 #include <cereal/types/vector.hpp>
 #include <cereal/types/tuple.hpp>
+#include <cassert>
 std::random_device rd;
 std::mt19937 gen(rd());
 
@@ -72,7 +73,7 @@ public:
 	FernClassifier(int fernSize, int numFerns, int numClasses)
 		: fernSize(fernSize), numFerns(numFerns), numClasses(numClasses), twoFernSize(1 << (fernSize)),
 		probs((1 << (fernSize))*(numClasses)*(numFerns), 1), 
-		counts((numClasses), (1 << (fernSize))),
+		counts((numClasses), (1 << (fernSize-1))),
 		features(fernSize*numFerns)
 	{
 	}
@@ -87,7 +88,7 @@ public:
 			}
 		}
 		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
-		counts = std::vector<float>((numClasses), (1 << (fernSize)));
+		counts = std::vector<float>((numClasses), (1 << (fernSize-1)));
 	}
 	void sampleOneFern(int w, int h)
 	{
@@ -100,7 +101,7 @@ public:
 		}
 
 		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
-		counts = std::vector<float>((numClasses), (1 << (fernSize)));
+		counts = std::vector<float>((numClasses), (1 << (fernSize-1)));
 	}
 	void sampleOneFeature(int w, int h)
 	{
@@ -119,7 +120,74 @@ public:
             std::make_tuple((uint8_t)wDist(gen), (uint8_t)hDist(gen), (uint8_t)std::get<2>(curr), (uint8_t)std::get<3>(curr));
 
 		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
-		counts = std::vector<float>((numClasses), (1 << (fernSize)));
+		counts = std::vector<float>((numClasses), (1 << (fernSize-1)));
+	}
+	void sampleBadFeatures(int w, int h)
+	{
+		std::uniform_int_distribution<int> wDist(0, w - 1);
+		std::uniform_int_distribution<int> hDist(0, h - 1);
+		std::bernoulli_distribution ft(0.5);
+
+		//std::vector<float> dotProducts(numFerns*fernSize, 0.f);
+		std::vector<float> dotProducts(numFerns*fernSize*numClasses, 0.f);
+		std::vector<float> dotProductsSum(numFerns*fernSize, 0.f);
+		static float maxSum = 0;
+		for (int f = 0; f < numFerns; f++) {
+			for (int b = 0; b < fernSize; b++) {
+				for (int c = 0; c < numClasses; c++) {
+					auto bitMask = (1 << b);
+					for (int n = 0; n < twoFernSize; n++) {
+						if (n & bitMask) {
+							dotProducts[f*fernSize*numClasses + b*numClasses + c]
+								+= probs[f*(numClasses*twoFernSize) + c*twoFernSize + n];
+						}
+					}
+				}
+				for (int c = 0; c < numClasses; c++) {
+					dotProducts[f*fernSize*numClasses + b*numClasses + c] /= (counts[c]*numClasses);
+				}
+				//sanity test
+				//float sum = 0.f;
+				//for (int c = 0; c < numClasses; c++) {
+				//	 sum += dotProducts[f*fernSize*numClasses + b*numClasses + c];
+				//}
+				//assert((sum - 1e-6 < 1));
+				//maxSum = maxSum < sum ? sum : maxSum;
+			}
+		}
+
+		for (int f = 0; f < numFerns; f++) {
+			for (int b = 0; b < fernSize; b++) {
+				// add up all differences between classes for a given feature
+
+				for (int r = 0; r < numClasses; r++) { //ref classes
+					auto ref = dotProducts[f*fernSize*numClasses + b*numClasses + r];
+					for (int t = r + 1; t < numClasses; t++) {
+						auto target = dotProducts[f*fernSize*numClasses + b*numClasses + t];
+						dotProductsSum[f*fernSize+b] += target*ref;
+					}
+				}
+			}
+		}
+
+		float maxVal = *std::min_element(dotProductsSum.begin(),dotProductsSum.end());
+		for (int f = 0; f < numFerns; f++) {
+			for (int b = 0; b < fernSize; b++) {
+				auto v = dotProductsSum[f*fernSize + b];
+				if (v <= maxVal) {
+					auto which = ft(gen);
+					auto curr = features[f*fernSize + b];
+					features[f*fernSize + b] = which ?
+						std::make_tuple((uint8_t)std::get<0>(curr), (uint8_t)std::get<1>(curr), (uint8_t)wDist(gen), (uint8_t)hDist(gen)) :
+						std::make_tuple((uint8_t)wDist(gen), (uint8_t)hDist(gen), (uint8_t)std::get<2>(curr), (uint8_t)std::get<3>(curr));
+					//features[f*fernSize + b] = std::make_tuple((uint8_t)wDist(gen), (uint8_t)hDist(gen), (uint8_t)wDist(gen), (uint8_t)hDist(gen));
+					auto newft = features[f*fernSize + b];
+					features[f*fernSize + b] = newft;
+				}
+			}
+		}
+		probs = std::vector<float>(twoFernSize*(numClasses)*(numFerns), 1);
+		counts = std::vector<float>((numClasses), (1 << (fernSize-1)));
 	}
 	int getHash(const img::Img<uint8_t> & img, const int fern) {
 		int hash = 0;
@@ -143,7 +211,6 @@ public:
 		counts[label]++;
 
 	}
-	//void finishTraining() 
 	uint8_t predict(const img::Img<uint8_t> & img) {
 		std::vector<float> fernClassProbs(numFerns*numClasses, 0); //tem
 		std::vector<float> fernSumProbs(numFerns, 0); //nrmzs
@@ -164,7 +231,7 @@ public:
 			}
 		}
 		for (int c = 0; c < numClasses; c++) {
-			auto prob = 1.0;
+			auto prob = 1.0f;
 			for (int f = 0; f < numFerns; f++) {
 				prob += logf(fernClassProbs[f*numClasses + c]);
 			}
@@ -198,11 +265,12 @@ int main(int argc, char * argv[])
 {
 	auto train_img = readMNISTImg("train-images-idx3-ubyte");
 	auto train_lbl = readMNISTLabel("train-labels-idx1-ubyte");
-	auto test_img = readMNISTImg("train-images-idx3-ubyte");
-	auto test_lbl = readMNISTLabel("train-labels-idx1-ubyte");
+	auto test_img = readMNISTImg("t10k-images-idx3-ubyte");
+	auto test_lbl = readMNISTLabel("t10k-labels-idx1-ubyte");
 	//auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
 	//auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
-	FernClassifier fc(13, 50, 10);
+	//Fern Features, Number of Ferns, Class Number
+	FernClassifier fc(10, 40, 10);
     printf("%d %d\n",train_img[0].width,train_img[0].height);
     fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
 
@@ -214,26 +282,34 @@ int main(int argc, char * argv[])
 	}
 	FernClassifier bestFC = fc;
 	float bestAcc = 1.0;
-	float pAcc = bestAcc;
+	float pAcc = 0;
 	int iter = 0;
 	int iterations = 15000;
-	float startTmp = 1.0;
-	float minTmp = 0.00001;
-	float tmpFactor = 0.99;
+	float startTmp = 1.0f;
+	float minTmp = 0.00001f;
+	float tmpFactor = 0.99f;
 	float temp = startTmp;
 	std::cout.precision(3);
 
 	while (true) {
 		fc = bestFC;
+
 		//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
-		fc.sampleOneFern(train_img[0].width, train_img[0].height);
+		//fc.sampleOneFern(train_img[0].width, train_img[0].height);
 		//fc.sampleOneFeature(train_img[0].width, train_img[0].height);
-		for (int i = 0; i < train_img.size(); i++) {
+		for (size_t i = 0; i < train_img.size(); i++) {
 			fc.train(train_img[i], train_lbl[i]);
 		}
+		fc.sampleBadFeatures(train_img[0].width, train_img[0].height);
+
+
+		for (size_t i = 0; i < train_img.size(); i++) {
+			fc.train(train_img[i], train_lbl[i]);
+		}
+
 		int predictQuality[10 * 10] = {};
 		float correct = 0;
-		for (int i = 0; i < test_img.size(); i++) {
+		for (size_t i = 0; i < test_img.size(); i++) {
 			auto res = fc.predict(test_img[i]);
 			predictQuality[10 * res + test_lbl[i]]++;
 			if (test_lbl[i] == res)
@@ -249,27 +325,32 @@ int main(int argc, char * argv[])
 		temp = std::max(tmpFactor*temp, minTmp);
 		float sample = cDist(gen);
 
-		if (meanAccuracy > bestAcc)
+		//if (meanAccuracy > bestAcc)
+		//{
+		//	bestFC = fc;
+		//	bestAcc = meanAccuracy;
+		//	pAcc = meanAccuracy;
+		//	std::cout << "NewBest" << std::endl;
+		//	std::ofstream os(std::to_string(std::round(meanAccuracy*100)).substr(0,2) + "_out.json", std::ios::binary);
+		//	cereal::JSONOutputArchive archive(os);
+		//	archive(fc);
+		//}
+		//else if (meanAccuracy > pAcc) {
+		//	bestFC = fc;
+		//	pAcc = meanAccuracy;
+		//	std::cout << "acceptedBetter" << std::endl;
+		//}
+		//else if (cost > sample) {
+		//	bestFC = fc;
+		//	pAcc = meanAccuracy;
+		//	std::cout << "accepted" << std::endl;
+		//}
+		//if (meanAccuracy > pAcc) 
 		{
 			bestFC = fc;
-			bestAcc = meanAccuracy;
 			pAcc = meanAccuracy;
-			std::cout << "NewBest" << std::endl;
-			std::ofstream os(std::to_string(std::round(meanAccuracy*100)).substr(0,2) + "_out.json", std::ios::binary);
-			cereal::JSONOutputArchive archive(os);
-			archive(fc);
+			//std::cout << "accepted" << std::endl;
 		}
-		else if (meanAccuracy > pAcc) {
-			bestFC = fc;
-			pAcc = meanAccuracy;
-			std::cout << "acceptedBetter" << std::endl;
-		}
-		else if (cost > sample) {
-			bestFC = fc;
-			pAcc = meanAccuracy;
-			std::cout << "accepted" << std::endl;
-		}
-
 		std::cout << meanAccuracy <<"\t" << cost << "\t" << sample << "\t" << iter << "\t" << temp << std::endl;
 
 		iter++;
@@ -281,27 +362,6 @@ int main(int argc, char * argv[])
 			temp = startTmp;
 		}
 	}
-	/*
-	int idx = 0;
-	do {
-		auto tl = train_lbl[idx];
-		auto t1 = train_img[idx++];
-		img::imshow("label",t1);
-		auto jpg = img::imread<uint8_t,3>("test.jpg");
-		auto png = img::imread<uint8_t, 3>("test.png");
-		auto jpg2 = img::boxFilter<11>(jpg);
-		img::imshow("jpg", jpg);
-		img::imshow("jpg2", jpg2);
 
-		auto gjpg = img::Rgb2grey(jpg);
-		jpg2 = img::grey2Rgb(gjpg);
-		auto gjpg2 = img::boxFilter<11>(gjpg);
-		img::imshow("jpg23", gjpg2);
-
-		auto intImg = img::intImage<uint8_t,1,uint32_t>(gjpg);
-		img::imshow("gjpg", gjpg);
-		img::imshow("png", png);
-	} while( 'q' != img::getKey(false));
-	*/
 	return 0;
 }
