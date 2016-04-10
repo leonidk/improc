@@ -170,11 +170,12 @@ public:
 			}
 		}
 
-		float maxVal = *std::min_element(dotProductsSum.begin(),dotProductsSum.end());
+		float minVal = *std::min_element(dotProductsSum.begin(),dotProductsSum.end());
+		std::cout << minVal << std::endl;
 		for (int f = 0; f < numFerns; f++) {
 			for (int b = 0; b < fernSize; b++) {
 				auto v = dotProductsSum[f*fernSize + b];
-				if (v <= maxVal) {
+				if (v <= minVal) {
 					auto which = ft(gen);
 					auto curr = features[f*fernSize + b];
 					features[f*fernSize + b] = which ?
@@ -270,7 +271,7 @@ int main(int argc, char * argv[])
 	//auto test_img = readMNISTImg("t10k-images.idx3-ubyte");
 	//auto test_lbl = readMNISTLabel("t10k-labels.idx1-ubyte");
 	//Fern Features, Number of Ferns, Class Number
-	FernClassifier fc(10, 40, 10);
+	FernClassifier fc(13, 10, 10);
     printf("%d %d\n",train_img[0].width,train_img[0].height);
     fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
 
@@ -293,14 +294,11 @@ int main(int argc, char * argv[])
 
 	while (true) {
 		fc = bestFC;
-
+		
 		//fc.sampleFeatureFerns(train_img[0].width, train_img[0].height);
 		//fc.sampleOneFern(train_img[0].width, train_img[0].height);
 		//fc.sampleOneFeature(train_img[0].width, train_img[0].height);
-		for (size_t i = 0; i < train_img.size(); i++) {
-			fc.train(train_img[i], train_lbl[i]);
-		}
-		fc.sampleBadFeatures(train_img[0].width, train_img[0].height);
+
 
 
 		for (size_t i = 0; i < train_img.size(); i++) {
@@ -316,6 +314,10 @@ int main(int argc, char * argv[])
 				correct++;
 		}
 		float meanAccuracy = correct / test_img.size();
+
+		//Note, the below training procedure saturates. Should use a validation set to make sure it doesn't overfit. 
+		fc.sampleBadFeatures(train_img[0].width, train_img[0].height);
+
 		//std::cout << meanAccuracy << std::endl;
 		auto sqr = [](float x) { return x*x; };
 		auto CONST = 0.1f;
@@ -345,11 +347,11 @@ int main(int argc, char * argv[])
 		//	pAcc = meanAccuracy;
 		//	std::cout << "accepted" << std::endl;
 		//}
-		//if (meanAccuracy > pAcc) 
+		////if (meanAccuracy > pAcc) 
 		{
 			bestFC = fc;
 			pAcc = meanAccuracy;
-			//std::cout << "accepted" << std::endl;
+		//	//std::cout << "accepted" << std::endl;
 		}
 		std::cout << meanAccuracy <<"\t" << cost << "\t" << sample << "\t" << iter << "\t" << temp << std::endl;
 
