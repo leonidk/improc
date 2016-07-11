@@ -14,13 +14,15 @@
 int main(int argc, char * argv[])
 {
 
-    auto jpg = img::imread<uint8_t, 3>("test.jpg");
     auto png = img::imread<uint8_t, 3>("test.png");
     do {
         auto gjpg = img::Rgb2grey(png);
-        auto dt = img::domainTransform(gjpg, gjpg, 1,40, 12.0f);
+        auto dt = img::domainTransform(gjpg, gjpg, 3,40, 12.0f);
         img::imshow("grey", gjpg);
         img::imshow("dt", dt);
+        auto dt2 = img::domainTransform(png, png, 3, 40, 3*12.0f);
+        img::imshow("rgb", png);
+        img::imshow("dt-rgb",dt2 );
 
     } while ( img::getKey() != 'q' );
 

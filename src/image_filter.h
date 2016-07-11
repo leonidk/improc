@@ -119,34 +119,36 @@ namespace img {
 	}
 	
     //domainTransform
-    Image<uint8_t, 1> domainTransform(
-        Image<uint8_t, 1> & input, 
-        Image<uint8_t, 1> & guide,
+    template<int C>
+    Image<uint8_t, C> domainTransform(
+        Image<uint8_t, C> input, 
+        Image<uint8_t, C> guide,
         const int iters,
         const float sigma_space,
         const float sigma_range) {
         auto ratio = sigma_space / sigma_range;
+
         Image<float, 1> ctx(input.width, input.height);
         Image<float, 1> cty(input.width, input.height);
-
         Image<float, 1> f_tmp(input.width, input.height);
 
+        Image<float, C> out(input.width, input.height);
+        Image<uint8_t, C> out_final(input.width, input.height);
 
-        Image<float, 1> out(input.width, input.height);
-        Image<uint8_t, 1> out_final(input.width, input.height);
-
-        for (int i = 0; i < input.width*input.height; i++)
+        for (int i = 0; i < input.width*input.height*C; i++)
             out.ptr[i] = static_cast<float>(input.ptr[i]);
 
         //ctx
         for (int y = 0; y < input.height; y++) {
-            float sum = 0;
             for (int x = 0; x < input.width-1; x++) {
-                auto idx = y*ctx.width + x;
-                auto idxn = y*ctx.width + x+1;
-                auto diff = std::abs(guide.ptr[idx] - guide.ptr[idxn]);
-                sum += diff;
-                ctx.ptr[idx] = 1.0f + ratio*diff;
+                auto idx = C*(y*ctx.width + x);
+                auto idxn = C*(y*ctx.width + x+1);
+                auto idxm = (y*ctx.width + x);
+
+                float sum = 0;
+                for (int c = 0; c < C; c++)
+                    sum += std::abs(guide.ptr[idx+c] - guide.ptr[idxn+c]);
+                ctx.ptr[idxm] = 1.0f + ratio*sum;
             }
         }
         
@@ -156,15 +158,18 @@ namespace img {
             for (int y = 0; y < input.height-1; y++) {
                 auto idx = y*cty.width + x;
                 auto idxn = (y+1)*cty.width + x;
-                auto diff = std::abs(guide.ptr[idx] - guide.ptr[idxn]);
-                sum += diff;
-                cty.ptr[idx] = 1.0f + ratio*diff;
+                auto idxm = (y*ctx.width + x);
+
+                float sum = 0;
+                for (int c = 0; c < C; c++)
+                    sum += std::abs(guide.ptr[idx] - guide.ptr[idxn]);
+                cty.ptr[idxm] = 1.0f + ratio*sum;
             }
         }
 
         // apply recursive filtering
         for (int i = 0; i < iters; i++) {
-            auto sigma_H = sigma_space * sqrt(3.0) * pow(2.0, iters - i - 1) / sqrt(pow(4.0, iters) - 1);
+            auto sigma_H = sigma_space * sqrt(3.0f) * pow(2.0f, iters - i - 1) / sqrt(pow(4.0f, iters) - 1);
             auto alpha =  exp(-sqrt(2.0f) / sigma_H);
             //horiz pass
             //generate f
@@ -177,28 +182,30 @@ namespace img {
             //apply
             for (int y = 0; y < input.height; y++) {
                 for (int x = 1; x < input.width; x++) {
-                    auto idx = y*input.width + x;
-                    auto idxn = y*input.width + x + 1;
-                    auto idxp = y*input.width + x - 1;
+                    auto idx = C*(y*input.width + x);
+                    auto idxp = C*(y*input.width + x - 1);
+                    auto idxpm = (y*input.width + x - 1);
 
-                    float c = f_tmp.ptr[idxp];
+                    float a = f_tmp.ptr[idxpm];
+                    for (int c = 0; c < C; c++) {
+                        float p = out.ptr[idx+c];
+                        float pn = out.ptr[idxp+c];
 
-                    float p = out.ptr[idx];
-                    float pn = out.ptr[idxp];
-
-                    out.ptr[idx] = p + c*(pn - p);
+                        out.ptr[idx+c] = p + a*(pn - p);
+                    }
                 }
                 for (int x = input.width - 2; x >= 0; x--) {
-                    auto idx = y*input.width + x;
-                    auto idxn = y*input.width + x + 1;
-                    auto idxp = y*input.width + x - 1;
+                    auto idx = C*(y*input.width + x);
+                    auto idxn = C*(y*input.width + x + 1);
+                    auto idxm = (y*input.width + x);
 
-                    float c = f_tmp.ptr[idx];
+                    float a = f_tmp.ptr[idxm];
+                    for (int c = 0; c < C; c++) {
+                        float p = out.ptr[idx + c];
+                        float pn = out.ptr[idxn + c];
 
-                    float p = out.ptr[idx];
-                    float pn = out.ptr[idxn];
-
-                    out.ptr[idx] = p + c*(pn - p);
+                        out.ptr[idx + c] = p + a*(pn - p);
+                    }
                 }
             }
             
@@ -213,33 +220,34 @@ namespace img {
             //apply
             for (int x = 0; x < input.width; x++) {
                 for (int y = 1; y < input.height; y++) {
+                    auto idx = C*(y*input.width + x);
+                    auto idxp = C*((y-1)*input.width + x);
+                    auto idxpm = (y - 1)*input.width + x;
 
-                    auto idx = y*input.width + x;
-                    auto idxn = (y+1)*input.width + x;
-                    auto idxp = (y-1)*input.width + x;
+                    float a = f_tmp.ptr[idxpm];
+                    for (int c = 0; c < C; c++) {
+                        float p = out.ptr[idx + c];
+                        float pn = out.ptr[idxp + c];
 
-                    float c = f_tmp.ptr[idxp];
-
-                    float p = out.ptr[idx];
-                    float pn = out.ptr[idxp];
-
-                    out.ptr[idx] = p + c*(pn - p);
+                        out.ptr[idx + c] = p + a*(pn - p);
+                    }
                 }
                 for (int y = input.height - 2; y >= 0; y--) {
-                    auto idx = y*input.width + x;
-                    auto idxn = (y + 1)*input.width + x;
-                    auto idxp = (y - 1)*input.width + x;
+                    auto idx = C*(y*input.width + x);
+                    auto idxn = C*((y + 1)*input.width + x);
+                    auto idxm = y*input.width + x;
 
-                    float c = f_tmp.ptr[idx];
+                    float a = f_tmp.ptr[idxm];
+                    for (int c = 0; c < C; c++) {
+                        float p = out.ptr[idx + c];
+                        float pn = out.ptr[idxn + c];
 
-                    float p = out.ptr[idx];
-                    float pn = out.ptr[idxn];
-
-                    out.ptr[idx] = p + c*(pn - p);
+                        out.ptr[idx + c] = p + a*(pn - p);
+                    }
                 }
             }
         }
-        for (int i = 0; i < input.width*input.height; i++)
+        for (int i = 0; i < input.width*input.height*C; i++)
             out_final.ptr[i] = (uint8_t)(out.ptr[i]+0.5f);
 
         return out_final;

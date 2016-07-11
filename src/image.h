@@ -33,8 +33,8 @@ namespace img {
             : data(d, null_d())
             , width(width)
             , height(height)
+            , ptr(d)
         {
-            ptr = data.get();
         }
 
         struct null_d {
@@ -69,6 +69,7 @@ namespace img {
         {
             img::Image<T, C> res(width, height);
             memcpy(res.data.get(), this->data.get(), width*height*sizeof(T)*C);
+            res.ptr = res.data.get();
             return res;
         }
     };
