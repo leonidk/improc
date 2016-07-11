@@ -83,8 +83,12 @@ namespace img {
 		template <typename T, int C, typename TT, int k_w>
 		Image<T, C> _boxFilter(const Image<T, C> & input){
 			Image<T, C> output(input.width, input.height);
+            Image<T, C> tmp(input.width, input.height);
+
 			T* in_data = (T*)input.data.get();
 			T* ot_data = (T*)output.data.get();
+            T* tmp_data = (T*)tmp.data.get();
+
 			memcpy(ot_data, in_data, sizeof(T)*input.width*input.height*C);
 			auto stride = input.width*C;
 			auto oset = k_w / 2;
@@ -95,7 +99,7 @@ namespace img {
 						for (int o = -oset; o <= oset; o++) {
 							tmp += in_data[y * stride + (x + o)*C + c];
 						}
-						ot_data[y * stride + x*C + c] = (tmp + k_w - 1) / k_w;
+                        tmp_data[y * stride + x*C + c] = (tmp + k_w - 1) / k_w;
 					}
 				}
 			}
@@ -104,16 +108,9 @@ namespace img {
 					for (int c = 0; c < C; c++) {
 						TT tmp = 0;
 						for (int o = -oset; o <= oset; o++) {
-							tmp += ot_data[(y + o) * stride + x*C + c];
+                            tmp += tmp_data[(y + o) * stride + x*C + c];
 						}
 						ot_data[y * stride + x*C + c] = (tmp + k_w - 1) / k_w;
-					}
-				}
-			}
-			for (int y = input.height - oset; y < input.height; y++) {
-				for (int x = 0; x < input.width; x++) {
-					for (int c = 0; c < C; c++) {
-						ot_data[y * stride + x*C + c] = in_data[y * stride + x*C + c];
 					}
 				}
 			}
@@ -121,6 +118,133 @@ namespace img {
 		}
 	}
 	
+    //domainTransform
+    Image<uint8_t, 1> domainTransform(
+        Image<uint8_t, 1> & input, 
+        Image<uint8_t, 1> & guide,
+        const int iters,
+        const float sigma_space,
+        const float sigma_range) {
+        auto ratio = sigma_space / sigma_range;
+        Image<float, 1> ctx(input.width, input.height);
+        Image<float, 1> cty(input.width, input.height);
+
+        Image<float, 1> f_tmp(input.width, input.height);
+
+
+        Image<float, 1> out(input.width, input.height);
+        Image<uint8_t, 1> out_final(input.width, input.height);
+
+        for (int i = 0; i < input.width*input.height; i++)
+            out.ptr[i] = static_cast<float>(input.ptr[i]);
+
+        //ctx
+        for (int y = 0; y < input.height; y++) {
+            float sum = 0;
+            for (int x = 0; x < input.width-1; x++) {
+                auto idx = y*ctx.width + x;
+                auto idxn = y*ctx.width + x+1;
+                auto diff = std::abs(guide.ptr[idx] - guide.ptr[idxn]);
+                sum += diff;
+                ctx.ptr[idx] = 1.0f + ratio*diff;
+            }
+        }
+        
+        //cty
+        for (int x = 0; x < input.width; x++) {
+            float sum = 0;
+            for (int y = 0; y < input.height-1; y++) {
+                auto idx = y*cty.width + x;
+                auto idxn = (y+1)*cty.width + x;
+                auto diff = std::abs(guide.ptr[idx] - guide.ptr[idxn]);
+                sum += diff;
+                cty.ptr[idx] = 1.0f + ratio*diff;
+            }
+        }
+
+        // apply recursive filtering
+        for (int i = 0; i < iters; i++) {
+            auto sigma_H = sigma_space * sqrt(3.0) * pow(2.0, iters - i - 1) / sqrt(pow(4.0, iters) - 1);
+            auto alpha =  exp(-sqrt(2.0f) / sigma_H);
+            //horiz pass
+            //generate f
+            for (int y = 0; y < input.height; y++) {
+                for (int x = 0; x < input.width - 1; x++) {
+                    auto idx = y*input.width + x;
+                    f_tmp.ptr[idx] = pow(alpha, ctx.ptr[idx]);
+                }
+            }
+            //apply
+            for (int y = 0; y < input.height; y++) {
+                for (int x = 1; x < input.width; x++) {
+                    auto idx = y*input.width + x;
+                    auto idxn = y*input.width + x + 1;
+                    auto idxp = y*input.width + x - 1;
+
+                    float c = f_tmp.ptr[idxp];
+
+                    float p = out.ptr[idx];
+                    float pn = out.ptr[idxp];
+
+                    out.ptr[idx] = p + c*(pn - p);
+                }
+                for (int x = input.width - 2; x >= 0; x--) {
+                    auto idx = y*input.width + x;
+                    auto idxn = y*input.width + x + 1;
+                    auto idxp = y*input.width + x - 1;
+
+                    float c = f_tmp.ptr[idx];
+
+                    float p = out.ptr[idx];
+                    float pn = out.ptr[idxn];
+
+                    out.ptr[idx] = p + c*(pn - p);
+                }
+            }
+            
+            //vertical pass
+            //generate f
+            for (int y = 0; y < input.height-1; y++) {
+                for (int x = 0; x < input.width; x++) {
+                    auto idx = y*input.width + x;
+                    f_tmp.ptr[idx] = pow(alpha, cty.ptr[idx]);
+                }
+            }
+            //apply
+            for (int x = 0; x < input.width; x++) {
+                for (int y = 1; y < input.height; y++) {
+
+                    auto idx = y*input.width + x;
+                    auto idxn = (y+1)*input.width + x;
+                    auto idxp = (y-1)*input.width + x;
+
+                    float c = f_tmp.ptr[idxp];
+
+                    float p = out.ptr[idx];
+                    float pn = out.ptr[idxp];
+
+                    out.ptr[idx] = p + c*(pn - p);
+                }
+                for (int y = input.height - 2; y >= 0; y--) {
+                    auto idx = y*input.width + x;
+                    auto idxn = (y + 1)*input.width + x;
+                    auto idxp = (y - 1)*input.width + x;
+
+                    float c = f_tmp.ptr[idx];
+
+                    float p = out.ptr[idx];
+                    float pn = out.ptr[idxn];
+
+                    out.ptr[idx] = p + c*(pn - p);
+                }
+            }
+        }
+        for (int i = 0; i < input.width*input.height; i++)
+            out_final.ptr[i] = (uint8_t)(out.ptr[i]+0.5f);
+
+        return out_final;
+    }
+
 	//boxFilter
 	template <typename T,int C,int k_w>
 	Image<T, C> boxFilter(const Image<T, C> & input){
