@@ -11,9 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{4F43A271-A77C-403F-8164-DDC1BB1CCBD6}</ProjectGuid>
+    <ProjectGuid>{B79FD7CD-02EB-400B-98A4-9CB6076DF746}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>improc</RootNamespace>
+    <RootNamespace>realsense</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -34,12 +34,14 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\LibRealsense\librealsense.vc12\librealsense.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\LibRealsense\librealsense.vc12\librealsense.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
-    <NuGetPackageImportStamp>f58d0b7f</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>800f672d</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -78,19 +80,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\image.h" />
-    <ClInclude Include="..\src\image_filter.h" />
-    <ClInclude Include="..\src\image_io.h" />
-    <ClInclude Include="..\src\stb_image.h" />
-    <ClInclude Include="..\src\stb_image_write.h" />
-  </ItemGroup>
-  <ItemGroup>
+    <ClCompile Include="..\src\cam_main.cpp" />
     <ClCompile Include="..\src\imio.cpp" />
     <ClCompile Include="..\src\imshow.cpp" />
-    <ClCompile Include="..\src\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\cam_util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

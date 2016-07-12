@@ -166,5 +166,7 @@ namespace img {
 	template void imshow(const char * name, const Image<uint8_t,1> &img);
 	template void imshow(const char * name, const Image<uint8_t, 3> &img);
 	template void imshow(const char * name, const Image<uint8_t, 4> &img);
+    template void imshow(const char * name, const Image<uint16_t, 1> &img);
+    template void imshow(const char * name, const Image<float, 3> &img);
 
 }
