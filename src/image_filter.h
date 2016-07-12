@@ -119,7 +119,7 @@ namespace img {
     }
 
     //domainTransform
-    template<typename T,int C>
+    template<typename T, int C>
     Image<T, C> domainTransform(
         Image<T, C> input,
         Image<T, C> guide,
@@ -253,9 +253,9 @@ namespace img {
         return out_final;
     }
     template<typename T, int C>
-    Image<T, C> domainTransformDepth(
+    Image<T, 1> domainTransformDepth(
         Image<T, C> input,
-        Image<T, C> guide,
+        Image<T, 1> guide,
         const int iters,
         const float sigma_space,
         const float sigma_range) {
@@ -273,32 +273,78 @@ namespace img {
 
         //ctx
         for (int y = 0; y < input.height; y++) {
+            int value = 0;
+            int steps = 0;
+            bool filling = false;
             for (int x = 0; x < input.width - 1; x++) {
-                auto idx = C*(y*ctx.width + x);
-                auto idxn = C*(y*ctx.width + x + 1);
-                auto idxm = (y*ctx.width + x);
+                auto idx = y*ctx.width + x;
+                auto idxn = y*ctx.width + x + 1;
 
-                float sum = 0;
-                for (int c = 0; c < C; c++)
-                    sum += (guide.ptr[idx + c] == USHRT_MAX || guide.ptr[idxn + c] == USHRT_MAX) ? 0 : std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]); //if USHRT_MAX instead of 0, almost the same as left fill + standard DT
-                    //sum +=  std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]);
-                ctx.ptr[idxm] = 1.0f + ratio*sum;
+                auto p = guide.ptr[idx];
+                auto pn = guide.ptr[idxn];
+                if (filling && p == USHRT_MAX) {
+                    steps++;
+                    continue;
+                }
+                if (filling) {
+                    auto diff = std::abs(p - value + steps) / steps;
+                    for (int i = 0; i < steps + 1; i++) {
+                        ctx.ptr[y*ctx.width + x - i] = 1.0f + ratio*diff;
+                    }
+                    filling = false;
+                    continue;
+                }
+                if (!filling && pn == USHRT_MAX) {
+                    value = p;
+                    steps = 1;
+                    filling = true;
+                    continue;
+                }
+                ctx.ptr[idx] = 1.0f + ratio*std::abs(p - pn);
+            }
+            if (filling) {
+                for (int i = 0; i < steps + 1; i++) {
+                    ctx.ptr[y*ctx.width + input.width - 1 - i] = 1.0f + USHRT_MAX / steps;
+                }
             }
         }
 
         //cty
         for (int x = 0; x < input.width; x++) {
-            float sum = 0;
+            int value = 0;
+            int steps = 0;
+            bool filling = false;
             for (int y = 0; y < input.height - 1; y++) {
-                auto idx = C*(y*cty.width + x);
-                auto idxn = C*((y + 1)*cty.width + x);
-                auto idxm = (y*ctx.width + x);
+                auto idx = y*cty.width + x;
+                auto idxn = (y + 1)*cty.width + x;
 
-                float sum = 0;
-                for (int c = 0; c < C; c++)
-                    sum += (guide.ptr[idx + c] == USHRT_MAX || guide.ptr[idxn + c] == USHRT_MAX) ? 0 : std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]); //if USHRT_MAX instead of 0, almost the same as left fill + standard DT
-                    //sum +=  std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]);
-                cty.ptr[idxm] = 1.0f + ratio*sum;
+                auto p = guide.ptr[idx];
+                auto pn = guide.ptr[idxn];
+
+                if (filling && p == USHRT_MAX) {
+                    steps++;
+                    continue;
+                }
+                if (filling) {
+                    auto diff = std::abs(p - value + steps) / steps;
+                    for (int i = 0; i < steps + 1; i++) {
+                        cty.ptr[(y - i)*cty.width + x] = 1.0f + ratio*diff;
+                    }
+                    filling = false;
+                    continue;
+                }
+                if (!filling && pn == USHRT_MAX) {
+                    value = p;
+                    steps = 1;
+                    filling = true;
+                    continue;
+                }
+                cty.ptr[idx] = 1.0f + ratio*std::abs(p - pn);
+            }
+            if (filling) {
+                for (int i = 0; i < steps + 1; i++) {
+                    cty.ptr[(input.height - 1 - i)*cty.width + x] = 1.0f + ratio*USHRT_MAX / steps;
+                }
             }
         }
 
@@ -328,11 +374,14 @@ namespace img {
                         float diff = (pn - p);
 
                         if (p == USHRT_MAX && pn == USHRT_MAX) {
-                        } else if (p == USHRT_MAX) {
+                        }
+                        else if (p == USHRT_MAX) {
                             out.ptr[idx + c] = pn;
-                        } else if (pn == USHRT_MAX) {
+                        }
+                        else if (pn == USHRT_MAX) {
                             out.ptr[idx + c] = p;
-                        } else {
+                        }
+                        else {
                             out.ptr[idx + c] = p + a*diff;
                         }
                     }
@@ -349,11 +398,14 @@ namespace img {
                         float diff = (pn - p);
 
                         if (p == USHRT_MAX && pn == USHRT_MAX) {
-                        } else if (p == USHRT_MAX) {
+                        }
+                        else if (p == USHRT_MAX) {
                             out.ptr[idx + c] = pn;
-                        } else if (pn == USHRT_MAX) {
+                        }
+                        else if (pn == USHRT_MAX) {
                             out.ptr[idx + c] = p;
-                        } else {
+                        }
+                        else {
                             out.ptr[idx + c] = p + a*diff;
                         }
                     }
@@ -382,11 +434,14 @@ namespace img {
                         float diff = (pn - p);
 
                         if (p == USHRT_MAX && pn == USHRT_MAX) {
-                        } else if (p == USHRT_MAX) {
-                          //  out.ptr[idx + c] = pn;
-                        } else if (pn == USHRT_MAX) {
+                        }
+                        else if (p == USHRT_MAX) {
+                            out.ptr[idx + c] = pn;
+                        }
+                        else if (pn == USHRT_MAX) {
                             out.ptr[idx + c] = p;
-                        } else {
+                        }
+                        else {
                             out.ptr[idx + c] = p + a*diff;
                         }
                     }
@@ -403,11 +458,14 @@ namespace img {
                         float diff = (pn - p);
 
                         if (p == USHRT_MAX && pn == USHRT_MAX) {
-                        } else if (p == USHRT_MAX) {
+                        }
+                        else if (p == USHRT_MAX) {
                             out.ptr[idx + c] = pn;
-                        } else if (pn == USHRT_MAX) {
+                        }
+                        else if (pn == USHRT_MAX) {
                             out.ptr[idx + c] = p;
-                        } else {
+                        }
+                        else {
                             out.ptr[idx + c] = p + a*diff;
                         }
                     }
@@ -419,133 +477,175 @@ namespace img {
 
         return out_final;
     }
-    //Image<uint16_t, 1> domainTransformDepth(
-    //    Image<uint16_t, 1> input,
-    //    Image<uint8_t, 3> guide,
-    //    const int iters,
-    //    const float sigma_space,
-    //    const float sigma_range) {
-    //    auto ratio = sigma_space / sigma_range;
+    Image<uint16_t, 1> domainTransformJoint(
+        Image<uint16_t, 1> input,
+        Image<uint8_t, 3> guide,
+        const int iters,
+        const float sigma_space,
+        const float sigma_range) {
+        auto ratio = sigma_space / sigma_range;
 
-    //    Image<float, 1> ctx(input.width, input.height);
-    //    Image<float, 1> cty(input.width, input.height);
-    //    Image<float, 1> f_tmp(input.width, input.height);
+        Image<float, 1> ctx(input.width, input.height);
+        Image<float, 1> cty(input.width, input.height);
+        Image<float, 1> f_tmp(input.width, input.height);
 
-    //    Image<float, 1> out(input.width, input.height);
-    //    Image<uint16_t, 1> out_final(input.width, input.height);
+        Image<float, 1> out(input.width, input.height);
+        Image<uint16_t, 1> out_final(input.width, input.height);
 
-    //    for (int i = 0; i < input.width*input.height; i++)
-    //        out.ptr[i] = static_cast<float>(input.ptr[i]);
+        for (int i = 0; i < input.width*input.height; i++)
+            out.ptr[i] = static_cast<float>(input.ptr[i]);
 
-    //    //ctx
-    //    for (int y = 0; y < input.height; y++) {
-    //        for (int x = 0; x < input.width - 1; x++) {
-    //            auto idx = 3 * (y*ctx.width + x);
-    //            auto idxn = 3 * (y*ctx.width + x + 1);
-    //            auto idxm = (y*ctx.width + x);
+        //ctx
+        for (int y = 0; y < input.height; y++) {
+            for (int x = 0; x < input.width - 1; x++) {
+                auto idx = 3 * (y*ctx.width + x);
+                auto idxn = 3 * (y*ctx.width + x + 1);
+                auto idxm = (y*ctx.width + x);
 
-    //            float sum = 0;
-    //            for (int c = 0; c < 3; c++)
-    //                sum += std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]);
-    //            ctx.ptr[idxm] = 1.0f + ratio*sum;
-    //        }
-    //    }
+                float sum = 0;
+                for (int c = 0; c < 3; c++)
+                    sum += std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]);
+                ctx.ptr[idxm] = 1.0f + ratio*sum;
+            }
+        }
 
-    //    //cty
-    //    for (int x = 0; x < input.width; x++) {
-    //        float sum = 0;
-    //        for (int y = 0; y < input.height - 1; y++) {
-    //            auto idx = 3 * (y*cty.width + x);
-    //            auto idxn = 3 * ((y + 1)*cty.width + x);
-    //            auto idxm = (y*ctx.width + x);
+        //cty
+        for (int x = 0; x < input.width; x++) {
+            float sum = 0;
+            for (int y = 0; y < input.height - 1; y++) {
+                auto idx = 3 * (y*cty.width + x);
+                auto idxn = 3 * ((y + 1)*cty.width + x);
+                auto idxm = (y*ctx.width + x);
 
-    //            float sum = 0;
-    //            for (int c = 0; c < 3; c++)
-    //                sum += std::abs(guide.ptr[idx] - guide.ptr[idxn]);
-    //            cty.ptr[idxm] = 1.0f + ratio*sum;
-    //        }
-    //    }
+                float sum = 0;
+                for (int c = 0; c < 3; c++)
+                    sum += std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]);
+                cty.ptr[idxm] = 1.0f + ratio*sum;
+            }
+        }
 
-    //    // apply recursive filtering
-    //    for (int i = 0; i < iters; i++) {
-    //        auto sigma_H = sigma_space * sqrt(3.0f) * pow(2.0f, iters - i - 1) / sqrt(pow(4.0f, iters) - 1);
-    //        auto alpha = exp(-sqrt(2.0f) / sigma_H);
-    //        //horiz pass
-    //        //generate f
-    //        for (int y = 0; y < input.height; y++) {
-    //            for (int x = 0; x < input.width - 1; x++) {
-    //                auto idx = y*input.width + x;
-    //                f_tmp.ptr[idx] = pow(alpha, ctx.ptr[idx]);
-    //            }
-    //        }
-    //        //apply
-    //        for (int y = 0; y < input.height; y++) {
-    //            for (int x = 1; x < input.width; x++) {
-    //                auto idx = (y*input.width + x);
-    //                auto idxp = (y*input.width + x - 1);
-    //                auto idxpm = (y*input.width + x - 1);
+        // apply recursive filtering
+        for (int i = 0; i < iters; i++) {
+            auto sigma_H = sigma_space * sqrt(3.0f) * pow(2.0f, iters - i - 1) / sqrt(pow(4.0f, iters) - 1);
+            auto alpha = exp(-sqrt(2.0f) / sigma_H);
+            //horiz pass
+            //generate f
+            for (int y = 0; y < input.height; y++) {
+                for (int x = 0; x < input.width - 1; x++) {
+                    auto idx = y*input.width + x;
+                    f_tmp.ptr[idx] = pow(alpha, ctx.ptr[idx]);
+                }
+            }
+            //apply
+            for (int y = 0; y < input.height; y++) {
+                for (int x = 1; x < input.width; x++) {
+                    auto idx = (y*input.width + x);
+                    auto idxp = (y*input.width + x - 1);
 
-    //                float a = f_tmp.ptr[idxpm];
-    //                float p = out.ptr[idx];
-    //                float pn = out.ptr[idxp];
+                    float a = f_tmp.ptr[idxp];
+                    float p = out.ptr[idx];
+                    float pn = out.ptr[idxp];
+                    float diff = (pn - p);
 
-    //                out.ptr[idx] = p + a*(pn - p);
-    //            }
-    //            for (int x = input.width - 2; x >= 0; x--) {
-    //                auto idx = (y*input.width + x);
-    //                auto idxn = (y*input.width + x + 1);
-    //                auto idxm = (y*input.width + x);
+                    if (p == USHRT_MAX && pn == USHRT_MAX) {
+                    }
+                    else if (p == USHRT_MAX) {
+                        out.ptr[idx] = pn;
+                    }
+                    else if (pn == USHRT_MAX) {
+                        out.ptr[idx] = p;
+                    }
+                    else {
+                        out.ptr[idx] = p + a*diff;
+                    }
 
-    //                float a = f_tmp.ptr[idxm];
-    //                float p = out.ptr[idx];
-    //                float pn = out.ptr[idxn];
+                }
+                for (int x = input.width - 2; x >= 0; x--) {
+                    auto idx = (y*input.width + x);
+                    auto idxn = (y*input.width + x + 1);
 
-    //                out.ptr[idx] = p + a*(pn - p);
+                    float a = f_tmp.ptr[idx];
+                    float p = out.ptr[idx];
+                    float pn = out.ptr[idxn];
+                    float diff = (pn - p);
 
-    //            }
-    //        }
+                    if (p == USHRT_MAX && pn == USHRT_MAX) {
+                    }
+                    else if (p == USHRT_MAX) {
+                        out.ptr[idx] = pn;
+                    }
+                    else if (pn == USHRT_MAX) {
+                        out.ptr[idx] = p;
+                    }
+                    else {
+                        out.ptr[idx] = p + a*diff;
+                    }
 
-    //        //vertical pass
-    //        //generate f
-    //        for (int y = 0; y < input.height - 1; y++) {
-    //            for (int x = 0; x < input.width; x++) {
-    //                auto idx = y*input.width + x;
-    //                f_tmp.ptr[idx] = pow(alpha, cty.ptr[idx]);
-    //            }
-    //        }
-    //        //apply
-    //        for (int x = 0; x < input.width; x++) {
-    //            for (int y = 1; y < input.height; y++) {
-    //                auto idx = (y*input.width + x);
-    //                auto idxp = (y - 1)*input.width + x;
-    //                auto idxpm = (y - 1)*input.width + x;
+                }
+            }
 
-    //                float a = f_tmp.ptr[idxpm];
-    //                float p = out.ptr[idx];
-    //                float pn = out.ptr[idxp];
+            //vertical pass
+            //generate f
+            for (int y = 0; y < input.height - 1; y++) {
+                for (int x = 0; x < input.width; x++) {
+                    auto idx = y*input.width + x;
+                    f_tmp.ptr[idx] = pow(alpha, cty.ptr[idx]);
+                }
+            }
+            //apply
+            for (int x = 0; x < input.width; x++) {
+                for (int y = 1; y < input.height; y++) {
+                    auto idx = (y*input.width + x);
+                    auto idxp = ((y - 1)*input.width + x);
 
-    //                out.ptr[idx] = p + a*(pn - p);
+                    float a = f_tmp.ptr[idxp];
+                    float p = out.ptr[idx];
+                    float pn = out.ptr[idxp];
+                    float diff = (pn - p);
 
-    //            }
-    //            for (int y = input.height - 2; y >= 0; y--) {
-    //                auto idx = (y*input.width + x);
-    //                auto idxn = ((y + 1)*input.width + x);
-    //                auto idxm = y*input.width + x;
+                    if (p == USHRT_MAX && pn == USHRT_MAX) {
+                    }
+                    else if (p == USHRT_MAX) {
+                        out.ptr[idx] = pn;
+                    }
+                    else if (pn == USHRT_MAX) {
+                        out.ptr[idx] = p;
+                    }
+                    else {
+                        out.ptr[idx] = p + a*diff;
+                    }
 
-    //                float a = f_tmp.ptr[idxm];
-    //                float p = out.ptr[idx];
-    //                float pn = out.ptr[idxn];
+                }
+                for (int y = input.height - 2; y >= 0; y--) {
+                    auto idx = (y*input.width + x);
+                    auto idxn = ((y + 1)*input.width + x);
+                    auto idxm = y*input.width + x;
 
-    //                out.ptr[idx] = p + a*(pn - p);
+                    float a = f_tmp.ptr[idxm];
+                    float p = out.ptr[idx];
+                    float pn = out.ptr[idxn];
+                    float diff = (pn - p);
 
-    //            }
-    //        }
-    //    }
-    //    for (int i = 0; i < input.width*input.height; i++)
-    //        out_final.ptr[i] = (uint8_t)(out.ptr[i] + 0.5f);
+                    if (p == USHRT_MAX && pn == USHRT_MAX) {
+                    }
+                    else if (p == USHRT_MAX) {
+                        out.ptr[idx] = pn;
+                    }
+                    else if (pn == USHRT_MAX) {
+                        out.ptr[idx] = p;
+                    }
+                    else {
+                        out.ptr[idx] = p + a*diff;
+                    }
 
-    //    return out_final;
-    //}
+                }
+            }
+        }
+        for (int i = 0; i < input.width*input.height; i++)
+            out_final.ptr[i] = (uint16_t)(out.ptr[i] + 0.5f);
+
+        return out_final;
+    }
     //boxFilter
     template <typename T, int C, int k_w>
     Image<T, C> boxFilter(const Image<T, C> & input){

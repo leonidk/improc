@@ -32,7 +32,7 @@ int main(int argc, char * argv[])
     rs::device & dev = *ctx.get_device(0);
     try {
         dev.enable_stream(rs::stream::depth, 480, 360, rs::format::disparity16, 30);
-        //dev.enable_stream(rs::stream::color, 640, 480, rs::format::rgb8, 30);
+        dev.enable_stream(rs::stream::color, 640, 480, rs::format::rgb8, 30);
 
         // Start our device
         dev.start();
@@ -45,9 +45,7 @@ int main(int argc, char * argv[])
         std::cout << e.what() << std::endl;
         return 1;
     }
-    auto w = dev.get_stream_width(rs::stream::depth);
-    auto h = dev.get_stream_height(rs::stream::depth);
-    auto f = dev.get_stream_format(rs::stream::depth);
+
     auto intrin = dev.get_stream_intrinsics(rs::stream::depth);
     auto extrin = dev.get_extrinsics(rs::stream::infrared2, rs::stream::infrared);
 
@@ -56,40 +54,72 @@ int main(int argc, char * argv[])
 
     do {
         dev.wait_for_frames();
-        auto disp = dev.get_frame_data(rs::stream::depth);
+        //depth based
+        {
+            auto w = dev.get_stream_width(rs::stream::depth);
+            auto h = dev.get_stream_height(rs::stream::depth);
 
-        auto dimg = img::Img<uint16_t>(w, h, (uint16_t*)disp);
-        auto dfill = dimg.copy(); left_fill(dfill.ptr, w, h);
+            auto disp = dev.get_frame_data(rs::stream::depth);
+
+            auto dimg = img::Img<uint16_t>(w, h, (uint16_t*)disp);
+            auto dfill = dimg.copy(); left_fill(dfill.ptr, w, h);
 
 
-        auto ppdisp = img::domainTransformDepth(dimg, dimg, 3, 13, 16);
-        auto ppfill = img::domainTransform(dfill, dfill, 2, 13, 16);
+            auto ppdisp = img::domainTransformDepth(dimg, dimg, 3, 13, 16);
+            auto ppfill = img::domainTransform(dfill, dfill, 2, 13, 16);
 
-        { //output stuff
-            auto himg = img::Image<uint8_t, 3>(w, h);
-            auto himg2 = img::Image<uint8_t, 3>(w, h);
-            auto himg3 = img::Image<uint8_t, 3>(w, h);
-            auto himg4 = img::Image<uint8_t, 3>(w, h);
-            auto himg5 = img::Image<uint8_t, 3>(w, h);
+            { //output stuff
+                auto himg = img::Image<uint8_t, 3>(w, h);
+                auto himg2 = img::Image<uint8_t, 3>(w, h);
+                auto himg3 = img::Image<uint8_t, 3>(w, h);
+                auto himg4 = img::Image<uint8_t, 3>(w, h);
+                auto himg5 = img::Image<uint8_t, 3>(w, h);
 
-            util::ConvertDepthToRGBUsingHistogram(himg.ptr, dimg.ptr, w, h, 0.1f, 0.625f);
-            util::ConvertDepthToRGBUsingHistogram(himg2.ptr, ppdisp.ptr, w, h, 0.1f, 0.625f);
+                util::ConvertDepthToRGBUsingHistogram(himg.ptr, dimg.ptr, w, h, 0.1f, 0.625f);
+                util::ConvertDepthToRGBUsingHistogram(himg2.ptr, ppdisp.ptr, w, h, 0.1f, 0.625f);
 
-            util::ConvertDepthToRGBUsingHistogram(himg4.ptr, dfill.ptr, w, h, 0.1f, 0.625f);
-            util::ConvertDepthToRGBUsingHistogram(himg5.ptr, ppfill.ptr, w, h, 0.1f, 0.625f);
-            auto ppdepth = img::Img<uint16_t>(w, h);
-            for (int i = 0; i < w*h; i++) {
-                ppdepth.ptr[i] = fB / (ppfill.ptr[i] / 32.0f);
+                util::ConvertDepthToRGBUsingHistogram(himg4.ptr, dfill.ptr, w, h, 0.1f, 0.625f);
+                util::ConvertDepthToRGBUsingHistogram(himg5.ptr, ppfill.ptr, w, h, 0.1f, 0.625f);
+                auto ppdepth = img::Img<uint16_t>(w, h);
+                for (int i = 0; i < w*h; i++) {
+                    ppdepth.ptr[i] = fB / (ppfill.ptr[i] / 32.0f);
+                }
+                util::ConvertDepthToRGBUsingHistogram(himg3.ptr, ppdepth.ptr, w, h, 0.1f, 0.625f);
+                img::imshow("original", himg);
+                img::imshow("disp-pp", himg2);
+                img::imshow("depth-pp", himg3);
+                img::imshow("disp-fill", himg4);
+                img::imshow("disp-fill-pp", himg5);
             }
-            util::ConvertDepthToRGBUsingHistogram(himg3.ptr, ppdepth.ptr, w, h, 0.1f, 0.625f);
-            img::imshow("original", himg);
-            img::imshow("disp-pp", himg2);
-            img::imshow("depth-pp", himg3);
-            img::imshow("disp-fill", himg4);
-            img::imshow("disp-fill-pp", himg5);
-
         }
+        { // color based
+            auto w = dev.get_stream_width(rs::stream::rectified_color);
+            auto h = dev.get_stream_height(rs::stream::rectified_color);
 
+            auto disp = dev.get_frame_data(rs::stream::depth_aligned_to_rectified_color);
+            auto color = dev.get_frame_data(rs::stream::rectified_color);
+
+            auto dimg = img::Image<uint16_t,1>(w, h, (uint16_t*)disp);
+            auto cimg = img::Image<uint8_t,3>(w, h, (uint8_t*)color);
+
+            auto ppdisp = img::domainTransformDepth(dimg, dimg, 3, 13, 16);
+            auto ppjoint = img::domainTransformJoint(dimg, cimg, 3, 13, 16*3);
+
+            { //output stuff
+                auto himg = img::Image<uint8_t, 3>(w, h);
+                auto himg2 = img::Image<uint8_t, 3>(w, h);
+                auto himg3 = img::Image<uint8_t, 3>(w, h);
+                auto himg4 = img::Image<uint8_t, 3>(w, h);
+                auto himg5 = img::Image<uint8_t, 3>(w, h);
+
+                util::ConvertDepthToRGBUsingHistogram(himg.ptr, dimg.ptr, w, h, 0.1f, 0.625f);
+                util::ConvertDepthToRGBUsingHistogram(himg2.ptr, ppdisp.ptr, w, h, 0.1f, 0.625f);
+                util::ConvertDepthToRGBUsingHistogram(himg4.ptr, ppjoint.ptr, w, h, 0.1f, 0.625f);
+                img::imshow("original-c", himg);
+                img::imshow("disp-pp-c", himg2);
+                img::imshow("joint-pp", himg4);
+            }
+        }
     } while ( img::getKey() != 'q' );
 
     return 0;
