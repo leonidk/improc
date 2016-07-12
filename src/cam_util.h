@@ -63,7 +63,8 @@ namespace util {
 
         for (int i = 0; i < width * height; ++i)
         {
-            if (auto d = depthImage[i]) ++histogram[d];
+            auto d = depthImage[i];
+            if (d && d != USHRT_MAX) ++histogram[d];
         }
 
         for (int i = 1; i < 256 * 256; i++)
@@ -81,7 +82,8 @@ namespace util {
         for (int i = 0; i < width * height; i++)
         {
             // For valid depth values (depth > 0) 
-            if (uint16_t d = depthImage[i])
+            uint16_t d = depthImage[i];
+            if (d && d != USHRT_MAX)
             {
                 auto t = histogram[d]; // Use the histogram entry (in the range of [0-256]) to interpolate between nearColor and farColor
                 std::array<int, 3> returnRGB = { 0, 0, 0 };
