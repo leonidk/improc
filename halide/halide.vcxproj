@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{B79FD7CD-02EB-400B-98A4-9CB6076DF746}</ProjectGuid>
+    <ProjectGuid>{DC359219-A407-4C8D-A08A-41FF97AB7899}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>realsense</RootNamespace>
+    <RootNamespace>halide</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -55,22 +55,22 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\LibRealsense\librealsense.vc12\librealsense.props" />
+    <Import Project="..\..\halide\halide.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\LibRealsense\librealsense.vc12\librealsense.props" />
+    <Import Project="..\..\halide\halide.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\LibRealsense\librealsense.vc12\librealsense.props" />
+    <Import Project="..\..\halide\halide.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\LibRealsense\librealsense.vc12\librealsense.props" />
+    <Import Project="..\..\halide\halide.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
-    <NuGetPackageImportStamp>800f672d</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>65d5e95f</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -99,11 +99,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,12 +129,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,26 +143,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\cam_main.cpp" />
     <ClCompile Include="..\src\imio.cpp" />
     <ClCompile Include="..\src\imshow.cpp" />
+    <ClCompile Include="Main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\image.h" />
+    <ClInclude Include="..\src\image_filter.h" />
+    <ClInclude Include="..\src\image_io.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\src\cam_util.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="packages\glfw.redist.3.2\build\native\glfw.redist.targets" Condition="Exists('packages\glfw.redist.3.2\build\native\glfw.redist.targets')" />
-    <Import Project="packages\glfw.3.2\build\native\glfw.targets" Condition="Exists('packages\glfw.3.2\build\native\glfw.targets')" />
+    <Import Project="..\msvc\packages\glfw.redist.3.2\build\native\glfw.redist.targets" Condition="Exists('..\msvc\packages\glfw.redist.3.2\build\native\glfw.redist.targets')" />
+    <Import Project="..\msvc\packages\glfw.3.2\build\native\glfw.targets" Condition="Exists('..\msvc\packages\glfw.3.2\build\native\glfw.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('packages\glfw.redist.3.2\build\native\glfw.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\glfw.redist.3.2\build\native\glfw.redist.targets'))" />
-    <Error Condition="!Exists('packages\glfw.3.2\build\native\glfw.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\glfw.3.2\build\native\glfw.targets'))" />
+    <Error Condition="!Exists('..\msvc\packages\glfw.redist.3.2\build\native\glfw.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\msvc\packages\glfw.redist.3.2\build\native\glfw.redist.targets'))" />
+    <Error Condition="!Exists('..\msvc\packages\glfw.3.2\build\native\glfw.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\msvc\packages\glfw.3.2\build\native\glfw.targets'))" />
   </Target>
 </Project>

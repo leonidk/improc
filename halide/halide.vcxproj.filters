@@ -1,15 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\src\cam_main.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="..\src\imio.cpp" />
     <ClCompile Include="..\src\imshow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-    <None Include="$(LIBRS_ROOT)/bin/Win32/realsense.dll" />
+    <ClInclude Include="..\src\image_io.h" />
+    <ClInclude Include="..\src\image.h" />
+    <ClInclude Include="..\src\image_filter.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\cam_util.h" />
+    <None Include="packages.config" />
+    <None Include="$(HALIDE_ROOT)/Debug/Halide.dll" />
   </ItemGroup>
 </Project>

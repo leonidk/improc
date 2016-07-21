@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="4.0">
+  <ImportGroup Label="PropertySheets" />
+  <!-- DIRECTIONS: Either set a HALIDE_ROOT environment variable or change the line below -->
+  <!-- The first example is a basic relative path -->
+  <!-- The second example is relative to the location of the property sheet -->
+  <PropertyGroup Label="UserMacros">
+    <!--  <HALIDE_ROOT Condition="'$(HALIDE_ROOT)' == ''">../../LibRealsense</HALIDE_ROOT>  -->
+	<HALIDE_ROOT Condition="'$(HALIDE_ROOT)' == ''">$(MSBuildThisFileDirectory)</HALIDE_ROOT>
+  </PropertyGroup>
+  <!-- Debug|x64 -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(HALIDE_ROOT)/include;$(HALIDE_ROOT)/tools;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(HALIDE_ROOT)/Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Halide.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <!-- Release|x64 -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(HALIDE_ROOT)/include;$(HALIDE_ROOT)/tools;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(HALIDE_ROOT)/Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Halide.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <None Include="$(HALIDE_ROOT)/Debug/Halide.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <None Include="$(HALIDE_ROOT)/Release/Halide.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
