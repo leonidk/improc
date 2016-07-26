@@ -162,7 +162,7 @@ namespace img {
 
                 float sum = 0;
                 for (int c = 0; c < C; c++)
-                    sum += std::abs(guide.ptr[idx] - guide.ptr[idxn]);
+                    sum += std::abs(guide.ptr[idx + c] - guide.ptr[idxn+c]);
                 cty.ptr[idxm] = 1.0f + ratio*sum;
             }
         }
