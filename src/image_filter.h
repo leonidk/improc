@@ -119,10 +119,10 @@ namespace img {
     }
 
     //domainTransform
-    template<typename T, int C>
+    template<typename T, int C, typename TG, int CG>
     Image<T, C> domainTransform(
         Image<T, C> input,
-        Image<T, C> guide,
+        Image<TG, CG> guide,
         const int iters,
         const float sigma_space,
         const float sigma_range) {
@@ -141,12 +141,12 @@ namespace img {
         //ctx
         for (int y = 0; y < input.height; y++) {
             for (int x = 0; x < input.width - 1; x++) {
-                auto idx = C*(y*ctx.width + x);
-                auto idxn = C*(y*ctx.width + x + 1);
+                auto idx = CG*(y*ctx.width + x);
+                auto idxn = CG*(y*ctx.width + x + 1);
                 auto idxm = (y*ctx.width + x);
 
                 float sum = 0;
-                for (int c = 0; c < C; c++)
+                for (int c = 0; c < CG; c++)
                     sum += std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]);
                 ctx.ptr[idxm] = 1.0f + ratio*sum;
             }
@@ -156,12 +156,12 @@ namespace img {
         for (int x = 0; x < input.width; x++) {
             float sum = 0;
             for (int y = 0; y < input.height - 1; y++) {
-                auto idx = C*(y*cty.width + x);
-                auto idxn = C*((y + 1)*cty.width + x);
+                auto idx = CG*(y*cty.width + x);
+                auto idxn = CG*((y + 1)*cty.width + x);
                 auto idxm = (y*ctx.width + x);
 
                 float sum = 0;
-                for (int c = 0; c < C; c++)
+                for (int c = 0; c < CG; c++)
                     sum += std::abs(guide.ptr[idx + c] - guide.ptr[idxn+c]);
                 cty.ptr[idxm] = 1.0f + ratio*sum;
             }
