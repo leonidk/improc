@@ -117,10 +117,9 @@ namespace img {
             return output;
         }
     }
-
     //domainTransform
     template<typename T, int C, typename TG, int CG>
-    Image<T, C> domainTransform(
+    Image<T, C> domainTransformOrig(
         Image<T, C> input,
         Image<TG, CG> guide,
         const int iters,
@@ -162,7 +161,7 @@ namespace img {
 
                 float sum = 0;
                 for (int c = 0; c < CG; c++)
-                    sum += std::abs(guide.ptr[idx + c] - guide.ptr[idxn+c]);
+                    sum += std::abs(guide.ptr[idx + c] - guide.ptr[idxn + c]);
                 cty.ptr[idxm] = 1.0f + ratio*sum;
             }
         }
@@ -249,6 +248,114 @@ namespace img {
         }
         for (int i = 0; i < input.width*input.height*C; i++)
             out_final.ptr[i] = (T)(out.ptr[i] + 0.5f);
+
+        return out_final;
+    }
+    //domainTransform
+    template<typename T, int C, typename TG, int CG>
+    Image<T, C> domainTransform(
+        Image<T, C> input,
+        Image<TG, CG> guide,
+        const int iters,
+        const float sigma_space,
+        const float sigma_range) {
+        auto ratio = sigma_space / sigma_range;
+
+        Image<float, 1> ctx(input.width, input.height);
+        Image<float, 1> cty(input.width, input.height);
+        Image<float, 1> f_tmp(input.width, input.height);
+
+        Image<float, C> out(input.width, input.height);
+        Image<T, C> out_final(input.width, input.height);
+
+        for (int i = 0; i < input.width*input.height*C; i++)
+            out(i) = static_cast<float>(input(i));
+
+        //ctx
+        for (int y = 0; y < input.height; y++) {
+            for (int x = 0; x < input.width - 1; x++) {
+                float sum = 0;
+                for (int c = 0; c < CG; c++)
+                    sum += std::abs(guide(y, x, c) - guide(y, x + 1, c));
+                ctx(y, x) = 1.0f + ratio*sum;
+            }
+        }
+
+        //cty
+        for (int x = 0; x < input.width; x++) {
+            float sum = 0;
+            for (int y = 0; y < input.height - 1; y++) {
+                float sum = 0;
+                for (int c = 0; c < CG; c++)
+                    sum += std::abs(guide(y, x, c) - guide(y + 1, x, c));
+                cty(y,x) = 1.0f + ratio*sum;
+            }
+        }
+
+        // apply recursive filtering
+        for (int i = 0; i < iters; i++) {
+            auto sigma_H = sigma_space * sqrt(3.0f) * pow(2.0f, iters - i - 1) / sqrt(pow(4.0f, iters) - 1);
+            auto alpha = exp(-sqrt(2.0f) / sigma_H);
+            //horiz pass
+            //generate f
+            for (int y = 0; y < input.height; y++) {
+                for (int x = 0; x < input.width - 1; x++) {
+                    f_tmp(y, x) = pow(alpha, ctx(y, x));
+                }
+            }
+            //apply
+            for (int y = 0; y < input.height; y++) {
+                for (int x = 1; x < input.width; x++) {
+                    float a = f_tmp(y, x - 1);
+                    for (int c = 0; c < C; c++) {
+                        float p = out(y, x, c);
+                        float pn = out(y, x - 1, c);
+
+                        out(y, x, c) = p + a*(pn - p);
+                    }
+                }
+                for (int x = input.width - 2; x >= 0; x--) {
+                    float a = f_tmp(y, x);
+                    for (int c = 0; c < C; c++) {
+                        float p = out(y, x, c);
+                        float pn = out(y, x + 1, c);
+
+                        out(y, x, c) = p + a*(pn - p);
+                    }
+                }
+            }
+
+            //vertical pass
+            //generate f
+            for (int y = 0; y < input.height - 1; y++) {
+                for (int x = 0; x < input.width; x++) {
+                    f_tmp(y, x) = pow(alpha, cty(y, x));
+                }
+            }
+            //apply
+            for (int x = 0; x < input.width; x++) {
+                for (int y = 1; y < input.height; y++) {
+                    float a = f_tmp(y - 1, x);
+                    for (int c = 0; c < C; c++) {
+                        float p = out(y, x, c);
+                        float pn = out(y - 1, x, c);
+
+                        out(y, x, c) = p + a*(pn - p);
+                    }
+                }
+                for (int y = input.height - 2; y >= 0; y--) {
+                    float a = f_tmp(y, x);
+                    for (int c = 0; c < C; c++) {
+                        float p = out(y, x, c);
+                        float pn = out(y + 1, x, c);
+
+                        out(y, x, c) = p + a*(pn - p);
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < input.width*input.height*C; i++)
+            out_final(i) = (T)(out(i) + 0.5f);
 
         return out_final;
     }

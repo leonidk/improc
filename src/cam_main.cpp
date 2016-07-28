@@ -6,20 +6,20 @@
 
 #include <librealsense\rs.hpp>
 
-void left_fill(uint16_t in_out[], int w, int h)
+void left_fill(img::Img<uint16_t> & in_out)
 {
-    for (int y = 0; y < h; y++) {
+    for (int y = 0; y < in_out.height; y++) {
         int x = 0;
-        auto fill = in_out[y*w];
-        for (x = 0; x < w && fill == USHRT_MAX; x++) {
-            fill = in_out[y*w + x];
+        auto fill = in_out(y, 0);
+        for (x = 0; x < in_out.width && fill == USHRT_MAX; x++) {
+            fill = in_out(y, x);
         }
         for (x = x - 1; x >= 0; x--) {
-            in_out[y*w + x] = fill;
+            in_out(y, x) = fill;
         }
-        for (int x = 0; x < w; x++) {
-            fill = (in_out[y*w + x] != USHRT_MAX) ? in_out[y*w + x] : fill;
-            in_out[y*w + x] = (in_out[y*w + x] != USHRT_MAX) ? in_out[y*w + x] : fill;
+        for (int x = 0; x < in_out.width; x++) {
+            fill = (in_out(y, x) != USHRT_MAX) ? in_out(y, x) : fill;
+            in_out(y, x) = (in_out(y, x) != USHRT_MAX) ? in_out(y, x) : fill;
         }
     }
 }
@@ -35,8 +35,9 @@ img::Img<uint16_t> processDepth(img::Img<uint16_t> depth)
 
 img::Img<uint16_t> processFillDepth(img::Img<uint16_t> depth)
 {
-    auto dfill = depth.copy(); left_fill(dfill.ptr, depth.width, depth.height);
-    return img::domainTransformDepth(dfill, dfill, dtIters, dtSpace, dtRange);
+    auto dfill = depth.copy(); 
+    left_fill(dfill);
+    return img::domainTransform(dfill, dfill, dtIters, dtSpace, dtRange);
 }
 
 img::Img<uint16_t> processFillColorize(img::Img<uint16_t> depth)
